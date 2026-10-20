@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>McDonald's EMPIRES - Prototype</title>
+    <title>McDonald's EMPIRES - 2号機</title>
     <!-- Leaflet.js (マップライブラリ) の読み込み -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -22,6 +22,16 @@
         .stats { font-size: 14px; color: #fff; }
         .stats span { color: #ffcc00; font-weight: bold; font-size: 16px; }
 
+        /* GPSボタン（現在地にジャンプ） */
+        .gps-btn {
+            position: absolute; top: 100px; right: 15px; z-index: 1000;
+            background: rgba(15, 15, 15, 0.95); border: 2px solid #d4af37;
+            color: #d4af37; width: 44px; height: 44px; border-radius: 50%;
+            font-size: 20px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer;
+        }
+        .gps-btn:active { transform: scale(0.9); }
+
         /* 下部アクションパネル */
         .bottom-panel {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;
@@ -29,6 +39,7 @@
             border: 2px solid #d4af37; border-radius: 12px; padding: 15px;
             color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
             display: none; text-align: center;
+            box-sizing: border-box;
         }
         .castle-name { font-size: 20px; color: #ffcc00; margin-bottom: 5px; font-weight: bold; }
         .castle-info { font-size: 13px; color: #aaa; margin-bottom: 15px; }
@@ -61,6 +72,9 @@
         <div class="stats">制圧: <span id="conquered-count">0</span>城 ｜ 総兵力: <span id="total-pt">0</span></div>
     </div>
 
+    <!-- GPSボタン -->
+    <div class="gps-btn" onclick="locateUser()">🎯</div>
+
     <div id="map"></div>
 
     <div id="cutin">天満城、完全制圧！</div>
@@ -80,11 +94,21 @@
     // 1. マップ初期化（大阪・梅田〜天満周辺を中心に設定）
     const map = L.map('map', { zoomControl: false }).setView([34.7024, 135.5050], 14);
 
-    // ダークモードの地図タイルを適用
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO',
+    // 【修正：完全無料・キー不要のスタイリッシュなダークマップに変更】
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
         maxZoom: 19
     }).addTo(map);
+
+    // ラベル（駅名や道路名）を邪魔しないよう、うっすら上乗せ
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
+        attribution: '',
+        maxZoom: 19,
+        opacity: 0.6
+    }).addTo(map);
+
+    // 現在地表示用マーカー
+    let userMarker = null;
 
     // 2. サンプル店舗データ（テスト用に大阪の主要5店舗を配置）
     const stores = [
@@ -180,6 +204,37 @@
         const totalPt = stores.reduce((sum, s) => sum + s.pt, 0);
         document.getElementById('conquered-count').innerText = conquered;
         document.getElementById('total-pt').innerText = totalPt.toLocaleString();
+    }
+
+    // GPS（現在地取得）機能
+    function locateUser() {
+        if (!navigator.geolocation) {
+            alert("お使いのブラウザはGPSに対応していません。");
+            return;
+        }
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                // 現在地に青い自軍マーカーを置く
+                if (userMarker) {
+                    userMarker.setLatLng([lat, lng]);
+                } else {
+                    userMarker = L.circleMarker([lat, lng], {
+                        radius: 6, color: '#00ffff', fillColor: '#0088ff', fillOpacity: 0.9, weight: 2
+                    }).addTo(map).bindPopup("自軍本陣（現在地）").openPopup();
+                }
+                
+                // 現在地までマップを移動
+                map.setView([lat, lng], 15);
+            },
+            (error) => {
+                alert("現在地を取得できませんでした。GPS許可を確認してください。");
+            },
+            { enableHighAccuracy: true }
+        );
     }
 </script>
 </body>
