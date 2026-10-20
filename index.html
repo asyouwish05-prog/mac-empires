@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>McDonald's EMPIRES - 5号機</title>
+    <title>McDonald's EMPIRES - 6号機</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -68,7 +68,7 @@
         .btn-attack:active { transform: scale(0.95); }
         .btn-attack:disabled { background: #222; color: #666; border-color: #444; pointer-events: none; }
 
-        /* 軍略メニューモーダル（戦歴・リセット） */
+        /* 軍略メニューモーダル */
         #modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 3000; display: none;
@@ -119,6 +119,7 @@
         <div class="ctrl-btn" onclick="openMenu()">📜 軍略メニュー</div>
     </div>
 
+    <!-- 【修正】地図の描画枠（DIV）を復活 -->
     <div id="map"></div>
 
     <div id="cutin">天満城、完全制圧！</div>
@@ -127,9 +128,7 @@
     <div id="modal-overlay" onclick="closeMenu(event)">
         <div class="modal-box" onclick="event.stopPropagation()">
             <div class="modal-title">📜 天下統一・軍略記録</div>
-            <div class="modal-body" id="modal-stats-text">
-                <!-- JavaScriptで動的挿入 -->
-            </div>
+            <div class="modal-body" id="modal-stats-text"></div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <button class="btn-modal-close" onclick="closeMenuDirect()">閉じる</button>
                 <button class="btn-modal-reset" onclick="confirmReset()">⚠️ 天下布武やり直し</button>
@@ -197,7 +196,6 @@
         } catch (e) {}
     }
 
-    // 合戦BGM（陣太鼓風ループ）
     function toggleBGM() {
         if (!audioCtx) audioCtx = new AudioCtx();
         if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -228,7 +226,7 @@
         }
     }
 
-    // --- 2. マップ初期化 ---
+    // --- 2. マップ初期化（現在地優先、取れなければ大阪キタ） ---
     const map = L.map('map', { zoomControl: false }).setView([34.7024, 135.5050], 14);
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap', maxZoom: 19, className: 'dark-map-tiles'
@@ -238,7 +236,6 @@
     let isCooldown = false;
     let cutinTimer = null;
 
-    // 初陣日時の記録（初回起動時に保存）
     if (!localStorage.getItem('mac_empires_start_date')) {
         localStorage.setItem('mac_empires_start_date', new Date().toLocaleString());
     }
@@ -262,7 +259,7 @@
         { id: "m16", name: "天王寺北口店", lat: 34.6475, lng: 135.5135, visits: 0, pt: 0 }
     ];
 
-    let stores = JSON.parse(localStorage.getItem('mac_empires_v5')) || defaultStores;
+    let stores = JSON.parse(localStorage.getItem('mac_empires_v6')) || defaultStores;
     let selectedStore = null;
     const markers = {};
     const circles = {};
@@ -305,6 +302,18 @@
 
     renderStores();
 
+    // 起動時に自動で現在地を取得してそこを中心に映す
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude, lng = pos.coords.longitude;
+                map.setView([lat, lng], 15);
+                userMarker = L.circleMarker([lat, lng], { radius: 7, color: '#00ffff', fillColor: '#0088ff', fillOpacity: 1, weight: 2 }).addTo(map).bindPopup("自軍本陣（現在地）");
+            },
+            () => {}, { enableHighAccuracy: true, timeout: 5000 }
+        );
+    }
+
     function selectStore(store) {
         selectedStore = store;
         const status = getCastleStatus(store.visits);
@@ -333,7 +342,7 @@
         selectedStore.pt += points;
         const newStatus = getCastleStatus(selectedStore.visits);
 
-        localStorage.setItem('mac_empires_v5', JSON.stringify(stores));
+        localStorage.setItem('mac_empires_v6', JSON.stringify(stores));
 
         markers[selectedStore.id].setStyle({ color: '#ffd700', fillColor: '#ff0000', radius: 10 });
         if (circles[selectedStore.id]) {
@@ -385,7 +394,6 @@
         document.getElementById('rank-display').innerText = `【称号】${rank}`;
     }
 
-    // --- 3. 周辺偵察（「マクド」や「マクドナルド」を幅広く自動スキャン） ---
     async function scanAreaStores() {
         const btn = document.getElementById('scan-btn');
         btn.innerText = "⏳ 偵察中...";
@@ -420,20 +428,9 @@
                 }
             });
 
-            localStorage.setItem('mac_empires_v5', JSON.stringify(stores));
+            localStorage.setItem('mac_empires_v6', JSON.stringify(stores));
             renderStores();
             btn.innerText = `🔍 完了(+${added}城)`;
             setTimeout(() => { btn.innerText = "🔍 周辺を偵察"; }, 2500);
         } catch (err) {
-            alert("偵察に失敗しました。少し地図をズームし直してから再度お試しください。");
-            btn.innerText = "🔍 周辺を偵察";
-        }
-    }
-
-    // --- 4. 軍略メニュー ＆ リセット機能 ---
-    function openMenu() {
-        playSound('select');
-        const startDate = localStorage.getItem('mac_empires_start_date') || "不明";
-        const totalVisits = stores.reduce((sum, s) => sum + s.visits, 0);
-        const conqueredCount = stores.filter(s => s.visits > 0).length;
-        const totalPt = stores.reduce((s
+            alert("偵察に失敗しました。少し地図をズームし直してから再度お試しく
