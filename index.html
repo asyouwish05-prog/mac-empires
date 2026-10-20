@@ -3,76 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>McDonald's EMPIRES - 2号機</title>
-    <!-- Leaflet.js (マップライブラリ) の読み込み -->
+    <title>McDonald's EMPIRES - 3号機</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; background: #111; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; overflow: hidden; }
-        #map { height: 100%; width: 100%; z-index: 1; }
+        body, html { margin: 0; padding: 0; height: 100%; background: #0a0e17; font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; overflow: hidden; }
+        #map { height: 100%; width: 100%; z-index: 1; background: #0a0e17; }
         
-        /* 上部ステータスバー（君主情報） */
+        /* 【重要】標準のOpenStreetMapを強制的にダーク戦国マップに変換するフィルター */
+        .dark-map-tiles {
+            filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(95%) grayscale(20%);
+        }
+
+        /* 上部ステータスバー */
         .header {
             position: absolute; top: 0; left: 0; right: 0; z-index: 1000;
-            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(20,20,20,0.8) 80%, transparent 100%);
-            color: #d4af37; padding: 15px 20px 25px; display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(15,15,15,0.85) 80%, transparent 100%);
+            color: #d4af37; padding: 15px 15px 25px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.4);
         }
-        .title-rank { font-size: 18px; font-weight: bold; text-shadow: 0 0 8px rgba(212,175,55,0.6); }
-        .stats { font-size: 14px; color: #fff; }
-        .stats span { color: #ffcc00; font-weight: bold; font-size: 16px; }
+        .title-rank { font-size: 16px; font-weight: bold; text-shadow: 0 0 8px rgba(212,175,55,0.6); }
+        .stats { font-size: 13px; color: #fff; }
+        .stats span { color: #ffcc00; font-weight: bold; font-size: 15px; }
 
-        /* GPSボタン（現在地にジャンプ） */
+        /* GPSボタン */
         .gps-btn {
-            position: absolute; top: 100px; right: 15px; z-index: 1000;
+            position: absolute; top: 80px; right: 15px; z-index: 1000;
             background: rgba(15, 15, 15, 0.95); border: 2px solid #d4af37;
-            color: #d4af37; width: 44px; height: 44px; border-radius: 50%;
-            font-size: 20px; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5); cursor: pointer;
+            color: #d4af37; width: 46px; height: 46px; border-radius: 50%;
+            font-size: 22px; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.7); cursor: pointer;
         }
         .gps-btn:active { transform: scale(0.9); }
 
         /* 下部アクションパネル */
         .bottom-panel {
             position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;
-            width: 90%; max-width: 400px; background: rgba(15, 15, 15, 0.95);
+            width: 92%; max-width: 400px; background: rgba(12, 12, 12, 0.95);
             border: 2px solid #d4af37; border-radius: 12px; padding: 15px;
-            color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.8);
-            display: none; text-align: center;
-            box-sizing: border-box;
+            color: #fff; box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+            display: none; text-align: center; box-sizing: border-box;
         }
         .castle-name { font-size: 20px; color: #ffcc00; margin-bottom: 5px; font-weight: bold; }
-        .castle-info { font-size: 13px; color: #aaa; margin-bottom: 15px; }
+        .castle-info { font-size: 12px; color: #ccc; margin-bottom: 15px; }
         
         /* 兵糧ボタン群 */
         .food-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .btn-attack {
             background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%);
-            color: #ffd700; border: 1px solid #d4af37; padding: 12px 8px;
+            color: #ffd700; border: 1px solid #d4af37; padding: 12px 6px;
             font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer;
-            transition: transform 0.1s; font-family: sans-serif;
+            font-family: sans-serif;
         }
         .btn-attack:active { transform: scale(0.95); }
 
         /* カットイン演出 */
         #cutin {
             position: absolute; top: 40%; left: 0; right: 0; z-index: 2000;
-            background: rgba(139, 0, 0, 0.85); color: #ffd700;
-            text-align: center; padding: 20px 0; font-size: 28px; font-weight: bold;
+            background: rgba(139, 0, 0, 0.9); color: #ffd700;
+            text-align: center; padding: 18px 0; font-size: 24px; font-weight: bold;
             border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700;
             text-shadow: 0 0 15px #000; display: none; pointer-events: none;
-            letter-spacing: 4px;
+            letter-spacing: 2px;
         }
     </style>
 </head>
 <body>
 
     <div class="header">
-        <div class="title-rank">【称号】浪人（見習い）</div>
+        <div class="title-rank" id="rank-display">【称号】浪人（見習い）</div>
         <div class="stats">制圧: <span id="conquered-count">0</span>城 ｜ 総兵力: <span id="total-pt">0</span></div>
     </div>
 
-    <!-- GPSボタン -->
     <div class="gps-btn" onclick="locateUser()">🎯</div>
 
     <div id="map"></div>
@@ -81,49 +83,49 @@
 
     <div class="bottom-panel" id="panel">
         <div class="castle-name" id="panel-title">天満店</div>
-        <div class="castle-info" id="panel-info">未制圧の拠点（タップして侵攻せよ）</div>
+        <div class="castle-info" id="panel-info">未制圧の拠点</div>
         <div class="food-grid">
             <button class="btn-attack" onclick="invade(150, '朝マック奇襲')">☀️ 朝マック (+150)</button>
             <button class="btn-attack" onclick="invade(100, '主力セット')">🍔 通常セット (+100)</button>
-            <button class="btn-attack" onclick="invade(200, '新兵器(期間限定)')">⚔️ 期間限定 (+200)</button>
+            <button class="btn-attack" onclick="invade(200, '期間限定')">⚔️ 期間限定 (+200)</button>
             <button class="btn-attack" onclick="invade(50, '斥候カフェ')">☕ カフェ (+50)</button>
         </div>
     </div>
 
 <script>
-    // 1. マップ初期化（大阪・梅田〜天満周辺を中心に設定）
+    // 1. マップ初期化（梅田〜天満周辺）
     const map = L.map('map', { zoomControl: false }).setView([34.7024, 135.5050], 14);
 
-    // 【修正：完全無料・キー不要のスタイリッシュなダークマップに変更】
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-        maxZoom: 19
-    }).addTo(map);
-
-    // ラベル（駅名や道路名）を邪魔しないよう、うっすら上乗せ
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-        attribution: '',
+    // 【確実表示】APIキー不要のOpenStreetMap本家タイル ＋ ダーク化クラス適用
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
         maxZoom: 19,
-        opacity: 0.6
+        className: 'dark-map-tiles'
     }).addTo(map);
 
-    // 現在地表示用マーカー
     let userMarker = null;
 
-    // 2. サンプル店舗データ（テスト用に大阪の主要5店舗を配置）
-    const stores = [
+    // 2. 店舗データ（大阪キタ〜ミナミの主要店舗を追加）
+    const defaultStores = [
         { id: 1, name: "天満駅前店", lat: 34.7048, lng: 135.5122, visits: 0, pt: 0 },
         { id: 2, name: "扇町店", lat: 34.7035, lng: 135.5095, visits: 0, pt: 0 },
         { id: 3, name: "梅田茶屋町店", lat: 34.7065, lng: 135.4988, visits: 0, pt: 0 },
         { id: 4, name: "南森町駅前店", lat: 34.6976, lng: 135.5113, visits: 0, pt: 0 },
-        { id: 5, name: "中崎町駅前店", lat: 34.7068, lng: 135.5053, visits: 0, pt: 0 }
+        { id: 5, name: "中崎町駅前店", lat: 34.7068, lng: 135.5053, visits: 0, pt: 0 },
+        { id: 6, name: "新梅田店", lat: 34.7032, lng: 135.4965, visits: 0, pt: 0 },
+        { id: 7, name: "ルクア大阪店", lat: 34.7030, lng: 135.4950, visits: 0, pt: 0 },
+        { id: 8, name: "曽根崎お初天神店", lat: 34.7005, lng: 135.5008, visits: 0, pt: 0 },
+        { id: 9, name: "淀屋橋ネクストワン店", lat: 34.6915, lng: 135.5015, visits: 0, pt: 0 },
+        { id: 10, name: "南海難波駅店", lat: 34.6645, lng: 135.5015, visits: 0, pt: 0 }
     ];
+
+    // スマホ内の保存データ（LocalStorage）があれば読み込む
+    let stores = JSON.parse(localStorage.getItem('mac_empires_data')) || defaultStores;
 
     let selectedStore = null;
     const markers = {};
     const circles = {};
 
-    // レベル計算ロジック（訪問回数に応じた城名と半径）
     function getCastleStatus(visits) {
         if (visits === 0) return { lv: 0, title: "未制圧", radius: 0 };
         if (visits < 3)  return { lv: 1, title: "前線陣地", radius: 300 };
@@ -133,17 +135,29 @@
         return { lv: 5, title: "覇王の王都（永久不落）", radius: 2000 };
     }
 
-    // 3. マップ上にピンを配置
+    // 3. マップ上にピンと既存の領土サークルを配置
     stores.forEach(store => {
+        const isConquered = store.visits > 0;
         const marker = L.circleMarker([store.lat, store.lng], {
-            radius: 8, color: '#888', fillColor: '#444', fillOpacity: 0.9, weight: 2
+            radius: isConquered ? 10 : 8,
+            color: isConquered ? '#ffd700' : '#888',
+            fillColor: isConquered ? '#ff0000' : '#444',
+            fillOpacity: 0.9, weight: 2
         }).addTo(map);
 
         marker.on('click', () => selectStore(store));
         markers[store.id] = marker;
+
+        if (isConquered) {
+            const status = getCastleStatus(store.visits);
+            circles[store.id] = L.circle([store.lat, store.lng], {
+                color: '#d4af37', weight: 1, fillColor: '#ffcc00', fillOpacity: 0.25, radius: status.radius
+            }).addTo(map);
+        }
     });
 
-    // 店舗選択時のパネル表示
+    updateHeader();
+
     function selectStore(store) {
         selectedStore = store;
         const status = getCastleStatus(store.visits);
@@ -158,22 +172,22 @@
         map.panTo([store.lat, store.lng]);
     }
 
-    // 4. 侵攻（チェックイン）処理
+    // 4. 侵攻処理＆自動セーブ
     function invade(points, menuName) {
         if (!selectedStore) return;
 
         const isFirst = (selectedStore.visits === 0);
         const oldLv = getCastleStatus(selectedStore.visits).lv;
 
-        // データ更新
         selectedStore.visits += 1;
         selectedStore.pt += points;
         const newStatus = getCastleStatus(selectedStore.visits);
 
-        // ピンの色を黄金に変更
+        // スマホ内にデータを自動保存
+        localStorage.setItem('mac_empires_data', JSON.stringify(stores));
+
         markers[selectedStore.id].setStyle({ color: '#ffd700', fillColor: '#ff0000', radius: 10 });
 
-        // 黄金の支配圏サークルを描画・拡大
         if (circles[selectedStore.id]) {
             circles[selectedStore.id].setRadius(newStatus.radius);
         } else {
@@ -182,7 +196,6 @@
             }).addTo(map);
         }
 
-        // カットイン演出
         const cutin = document.getElementById('cutin');
         if (isFirst) {
             cutin.innerText = `${selectedStore.name}、完全制圧！`;
@@ -194,7 +207,6 @@
         cutin.style.display = 'block';
         setTimeout(() => { cutin.style.display = 'none'; }, 1800);
 
-        // パネルと上部ステータスの更新
         selectStore(selectedStore);
         updateHeader();
     }
@@ -204,35 +216,35 @@
         const totalPt = stores.reduce((sum, s) => sum + s.pt, 0);
         document.getElementById('conquered-count').innerText = conquered;
         document.getElementById('total-pt').innerText = totalPt.toLocaleString();
+
+        // 兵力に応じた称号の昇進
+        let rank = "浪人（見習い）";
+        if (totalPt >= 500) rank = "足軽大将";
+        if (totalPt >= 1500) rank = "一城の主";
+        if (totalPt >= 3000) rank = "大阪管領";
+        if (totalPt >= 5000) rank = "天下無双の覇王";
+        document.getElementById('rank-display').innerText = `【称号】${rank}`;
     }
 
-    // GPS（現在地取得）機能
     function locateUser() {
         if (!navigator.geolocation) {
             alert("お使いのブラウザはGPSに対応していません。");
             return;
         }
-        
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const lat = position.coords.latitude;
                 const lng = position.coords.longitude;
-
-                // 現在地に青い自軍マーカーを置く
                 if (userMarker) {
                     userMarker.setLatLng([lat, lng]);
                 } else {
                     userMarker = L.circleMarker([lat, lng], {
-                        radius: 6, color: '#00ffff', fillColor: '#0088ff', fillOpacity: 0.9, weight: 2
+                        radius: 7, color: '#00ffff', fillColor: '#0088ff', fillOpacity: 1, weight: 2
                     }).addTo(map).bindPopup("自軍本陣（現在地）").openPopup();
                 }
-                
-                // 現在地までマップを移動
                 map.setView([lat, lng], 15);
             },
-            (error) => {
-                alert("現在地を取得できませんでした。GPS許可を確認してください。");
-            },
+            () => { alert("現在地を取得できませんでした。"); },
             { enableHighAccuracy: true }
         );
     }
