@@ -3,23 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>McDonald's EMPIRES - 7号機</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <title>McDonald's EMPIRES - 8号機</title>
+    <!-- 超安定サーバー(Cloudflare)から地図システムを読み込み -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body, html { width: 100vw; height: 100vh; overflow: hidden; background: #0a0e17; font-family: sans-serif; user-select: none; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; font-family: sans-serif; user-select: none; }
         
-        /* マップの高さを100vh（画面の高さ100%）で絶対固定 */
-        #map { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; background: #1a1f2c; }
+        #map { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; background: #1a1f2c; }
         
-        /* ダーク戦国マップ変換フィルター */
         .dark-map-tiles {
             filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) grayscale(20%);
         }
 
-        /* 上部ステータスバー */
         .header {
-            position: absolute; top: 0; left: 0; right: 0; z-index: 1000;
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
             background: rgba(0, 0, 0, 0.9);
             color: #d4af37; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center;
             border-bottom: 2px solid #d4af37;
@@ -28,24 +27,21 @@
         .stats { font-size: 12px; color: #fff; text-align: right; }
         .stats span { color: #ffcc00; font-weight: bold; font-size: 14px; }
 
-        /* 稼働モニター（デバッグ＆案内バー） */
         #status-bar {
-            position: absolute; top: 58px; left: 0; right: 0; z-index: 1000;
-            background: rgba(20, 40, 20, 0.9); color: #00ff88; font-size: 11px;
-            text-align: center; padding: 4px; border-bottom: 1px solid #00ff88;
+            position: fixed; top: 56px; left: 0; right: 0; z-index: 1000;
+            background: rgba(20, 40, 20, 0.95); color: #00ff88; font-size: 11px;
+            text-align: center; padding: 5px; border-bottom: 1px solid #00ff88;
         }
 
-        /* 左上BGMボタン */
         .bgm-btn {
-            position: absolute; top: 90px; left: 12px; z-index: 1000;
+            position: fixed; top: 90px; left: 12px; z-index: 1000;
             background: rgba(15, 15, 15, 0.95); border: 2px solid #d4af37;
             color: #ffd700; padding: 9px 12px; border-radius: 20px;
             font-size: 12px; font-weight: bold; cursor: pointer;
         }
 
-        /* 右側コントロールボタン群 */
         .side-controls {
-            position: absolute; top: 90px; right: 12px; z-index: 1000;
+            position: fixed; top: 90px; right: 12px; z-index: 1000;
             display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
         }
         .ctrl-btn {
@@ -54,9 +50,8 @@
             font-size: 12px; font-weight: bold; cursor: pointer;
         }
 
-        /* 下部アクションパネル */
         .bottom-panel {
-            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;
+            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;
             width: 92%; max-width: 400px; background: rgba(12, 12, 12, 0.95);
             border: 2px solid #d4af37; border-radius: 12px; padding: 15px;
             color: #fff; display: none; text-align: center;
@@ -72,9 +67,8 @@
         }
         .btn-attack:disabled { background: #222; color: #666; border-color: #444; }
 
-        /* 軍略メニューモーダル */
         #modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.85); z-index: 3000; display: none;
             justify-content: center; align-items: center;
         }
@@ -87,9 +81,8 @@
         .btn-modal-close { background: #333; color: #fff; border: 1px solid #888; padding: 8px 16px; border-radius: 6px; }
         .btn-modal-reset { background: #800; color: #ffcccc; border: 1px solid #f00; padding: 8px 16px; border-radius: 6px; }
 
-        /* カットイン演出 */
         #cutin {
-            position: absolute; top: 40%; left: 0; right: 0; z-index: 2000;
+            position: fixed; top: 40%; left: 0; right: 0; z-index: 2000;
             background: rgba(139,0,0,0.95); color: #ffd700; text-align: center;
             padding: 18px 0; font-size: 22px; font-weight: bold;
             border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700;
@@ -104,7 +97,7 @@
         <div class="stats">制圧: <span id="conquered-count">0</span>城<br>総兵力: <span id="total-pt">0</span></div>
     </div>
 
-    <div id="status-bar">⏳ 戦術マップを起動中...</div>
+    <div id="status-bar">⏳ システム起動中...</div>
 
     <button class="bgm-btn" id="bgm-toggle-btn" onclick="toggleBGM()">🎵 BGM: 停止中</button>
 
@@ -114,7 +107,6 @@
         <button class="ctrl-btn" onclick="openMenu()">📜 軍略メニュー</button>
     </div>
 
-    <!-- 地図本体 -->
     <div id="map"></div>
 
     <div id="cutin">完全制圧！</div>
@@ -141,53 +133,51 @@
         </div>
     </div>
 
-    <!-- Leafletスクリプトを最後に読み込むことで確実に描画 -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        const statusBar = document.getElementById('status-bar');
+        var statusBar = document.getElementById('status-bar');
         window.onerror = function(msg, url, line) {
-            statusBar.style.background = '#600';
+            statusBar.style.background = '#800';
             statusBar.style.color = '#fff';
             statusBar.innerText = '⚠️ エラー(行:' + line + '): ' + msg;
         };
 
-        // --- 1. サウンド＆BGM ---
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        let audioCtx = null;
-        let bgmInterval = null;
-        let isBgmPlaying = false;
+        var AudioCtx = window.AudioContext || window.webkitAudioContext;
+        var audioCtx = null;
+        var bgmInterval = null;
+        var isBgmPlaying = false;
 
         function playSound(type) {
             try {
                 if (!audioCtx) audioCtx = new AudioCtx();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
-                const now = audioCtx.currentTime;
+                var now = audioCtx.currentTime;
                 if (type === 'select') {
-                    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+                    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                     osc.frequency.setValueAtTime(550, now);
                     gain.gain.setValueAtTime(0.15, now);
                     gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
                     osc.connect(gain); gain.connect(audioCtx.destination);
                     osc.start(now); osc.stop(now + 0.06);
                 } else if (type === 'attack') {
-                    const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-                    osc.type = 'triangle';
-                    osc.frequency.setValueAtTime(160, now);
-                    osc.frequency.exponentialRampToValueAtTime(45, now + 0.35);
-                    gain.gain.setValueAtTime(0.5, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.35);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now); osc.stop(now + 0.35);
+                    var osc2 = audioCtx.createOscillator(), gain2 = audioCtx.createGain();
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(160, now);
+                    osc2.frequency.exponentialRampToValueAtTime(45, now + 0.35);
+                    gain2.gain.setValueAtTime(0.5, now);
+                    gain2.gain.linearRampToValueAtTime(0.01, now + 0.35);
+                    osc2.connect(gain2); gain2.connect(audioCtx.destination);
+                    osc2.start(now); osc2.stop(now + 0.35);
                 } else if (type === 'levelup') {
-                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-                        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-                        osc.type = 'sawtooth';
-                        osc.frequency.setValueAtTime(freq, now + i * 0.07);
-                        gain.gain.setValueAtTime(0.18, now + i * 0.07);
-                        gain.gain.exponentialRampToValueAtTime(0.008, now + i * 0.07 + 0.45);
-                        osc.connect(gain); gain.connect(audioCtx.destination);
-                        osc.start(now + i * 0.07); osc.stop(now + i * 0.07 + 0.45);
-                    });
+                    var freqs = [523.25, 659.25, 783.99, 1046.50];
+                    for (var i = 0; i < freqs.length; i++) {
+                        var osc3 = audioCtx.createOscillator(), gain3 = audioCtx.createGain();
+                        osc3.type = 'sawtooth';
+                        osc3.frequency.setValueAtTime(freqs[i], now + i * 0.07);
+                        gain3.gain.setValueAtTime(0.18, now + i * 0.07);
+                        gain3.gain.exponentialRampToValueAtTime(0.008, now + i * 0.07 + 0.45);
+                        osc3.connect(gain3); gain3.connect(audioCtx.destination);
+                        osc3.start(now + i * 0.07); osc3.stop(now + i * 0.07 + 0.45);
+                    }
                 }
                 if (navigator.vibrate) navigator.vibrate(type === 'levelup' ? [80, 50, 150] : 40);
             } catch (e) {}
@@ -197,7 +187,7 @@
             try {
                 if (!audioCtx) audioCtx = new AudioCtx();
                 if (audioCtx.state === 'suspended') audioCtx.resume();
-                const btn = document.getElementById('bgm-toggle-btn');
+                var btn = document.getElementById('bgm-toggle-btn');
                 if (isBgmPlaying) {
                     clearInterval(bgmInterval);
                     isBgmPlaying = false;
@@ -205,12 +195,12 @@
                 } else {
                     isBgmPlaying = true;
                     btn.innerText = "🎵 BGM: 再生中";
-                    const notes = [110, 110, 164.81, 110, 130.81, 146.83];
-                    let step = 0;
-                    bgmInterval = setInterval(() => {
+                    var notes = [110, 110, 164.81, 110, 130.81, 146.83];
+                    var step = 0;
+                    bgmInterval = setInterval(function() {
                         if (!isBgmPlaying) return;
-                        const now = audioCtx.currentTime;
-                        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+                        var now = audioCtx.currentTime;
+                        var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
                         osc.type = 'sawtooth';
                         osc.frequency.setValueAtTime(notes[step % notes.length], now);
                         gain.gain.setValueAtTime(0.07, now);
@@ -223,24 +213,25 @@
             } catch (e) {}
         }
 
-        // --- 2. マップ初期化（南船場・心斎橋〜梅田エリアが広く見える位置） ---
-        const map = L.map('map', { zoomControl: false }).setView([34.6850, 135.5050], 14);
+        if (typeof L === 'undefined') {
+            statusBar.style.background = '#800';
+            statusBar.innerText = '⚠️ 地図ライブラリの通信に失敗しました。再読み込みしてください';
+        }
+
+        var map = L.map('map', { zoomControl: false }).setView([34.6850, 135.5050], 14);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap', maxZoom: 19, className: 'dark-map-tiles'
         }).addTo(map);
 
-        setTimeout(() => { map.invalidateSize(); }, 300);
-
-        let userMarker = null;
-        let isCooldown = false;
-        let cutinTimer = null;
+        var userMarker = null;
+        var isCooldown = false;
+        var cutinTimer = null;
 
         if (!localStorage.getItem('mac_empires_start_date')) {
             localStorage.setItem('mac_empires_start_date', new Date().toLocaleString());
         }
 
-        // 初期店舗リスト（堺筋本町・南船場・長堀橋エリアも最初から搭載！）
-        const defaultStores = [
+        var defaultStores = [
             { id: "m1", name: "天満駅前店", lat: 34.7048, lng: 135.5122, visits: 0, pt: 0 },
             { id: "m2", name: "扇町店", lat: 34.7035, lng: 135.5095, visits: 0, pt: 0 },
             { id: "m3", name: "梅田茶屋町店", lat: 34.7065, lng: 135.4988, visits: 0, pt: 0 },
@@ -263,15 +254,15 @@
             { id: "m20", name: "心斎橋北店", lat: 34.6765, lng: 135.5011, visits: 0, pt: 0 }
         ];
 
-        let stores = defaultStores;
+        var stores = defaultStores;
         try {
-            const saved = JSON.parse(localStorage.getItem('mac_empires_v7'));
+            var saved = JSON.parse(localStorage.getItem('mac_empires_v8'));
             if (saved && Array.isArray(saved)) stores = saved;
         } catch (e) {}
 
-        let selectedStore = null;
-        const markers = {};
-        const circles = {};
+        var selectedStore = null;
+        var markers = {};
+        var circles = {};
 
         function getCastleStatus(visits) {
             if (visits === 0) return { lv: 0, title: "未制圧", radius: 0 };
@@ -283,24 +274,24 @@
         }
 
         function renderStores() {
-            stores.forEach(store => {
+            stores.forEach(function(store) {
                 if (markers[store.id]) return;
-                const isConquered = store.visits > 0;
-                const marker = L.circleMarker([store.lat, store.lng], {
+                var isConquered = store.visits > 0;
+                var marker = L.circleMarker([store.lat, store.lng], {
                     radius: isConquered ? 11 : 9,
                     color: isConquered ? '#ffd700' : '#00ffcc',
                     fillColor: isConquered ? '#ff0000' : '#222222',
                     fillOpacity: 0.95, weight: 3
                 }).addTo(map);
 
-                marker.on('click', () => {
+                marker.on('click', function() {
                     playSound('select');
                     selectStore(store);
                 });
                 markers[store.id] = marker;
 
                 if (isConquered) {
-                    const status = getCastleStatus(store.visits);
+                    var status = getCastleStatus(store.visits);
                     circles[store.id] = L.circle([store.lat, store.lng], {
                         color: '#d4af37', weight: 1, fillColor: '#ffcc00', fillOpacity: 0.25, radius: status.radius
                     }).addTo(map);
@@ -310,11 +301,11 @@
         }
 
         renderStores();
-        statusBar.innerText = "🟢 7号機稼働中：城ピンをタップして侵攻せよ（周辺偵察で店舗追加）";
+        statusBar.innerText = "🟢 8号機稼働中：城ピンをタップして侵攻せよ！";
 
         function selectStore(store) {
             selectedStore = store;
-            const status = getCastleStatus(store.visits);
+            var status = getCastleStatus(store.visits);
             document.getElementById('panel').style.display = 'block';
             document.getElementById('panel-title').innerText = "🏯 " + store.name;
             if (store.visits === 0) {
@@ -330,17 +321,17 @@
             if (!selectedStore || isCooldown) return;
 
             isCooldown = true;
-            const buttons = document.querySelectorAll('.btn-attack');
-            buttons.forEach(b => b.disabled = true);
+            var buttons = document.querySelectorAll('.btn-attack');
+            for (var i = 0; i < buttons.length; i++) buttons[i].disabled = true;
 
-            const isFirst = (selectedStore.visits === 0);
-            const oldLv = getCastleStatus(selectedStore.visits).lv;
+            var isFirst = (selectedStore.visits === 0);
+            var oldLv = getCastleStatus(selectedStore.visits).lv;
 
             selectedStore.visits += 1;
             selectedStore.pt += points;
-            const newStatus = getCastleStatus(selectedStore.visits);
+            var newStatus = getCastleStatus(selectedStore.visits);
 
-            localStorage.setItem('mac_empires_v7', JSON.stringify(stores));
+            localStorage.setItem('mac_empires_v8', JSON.stringify(stores));
 
             markers[selectedStore.id].setStyle({ color: '#ffd700', fillColor: '#ff0000', radius: 11 });
             if (circles[selectedStore.id]) {
@@ -351,7 +342,7 @@
                 }).addTo(map);
             }
 
-            const cutin = document.getElementById('cutin');
+            var cutin = document.getElementById('cutin');
             if (cutinTimer) clearTimeout(cutinTimer);
 
             if (isFirst) {
@@ -369,20 +360,24 @@
             selectStore(selectedStore);
             updateHeader();
 
-            cutinTimer = setTimeout(() => {
+            cutinTimer = setTimeout(function() {
                 cutin.style.display = 'none';
                 isCooldown = false;
-                buttons.forEach(b => b.disabled = false);
+                for (var j = 0; j < buttons.length; j++) buttons[j].disabled = false;
             }, 1500);
         }
 
         function updateHeader() {
-            const conquered = stores.filter(s => s.visits > 0).length;
-            const totalPt = stores.reduce((sum, s) => sum + s.pt, 0);
+            var conquered = 0;
+            var totalPt = 0;
+            for (var i = 0; i < stores.length; i++) {
+                if (stores[i].visits > 0) conquered++;
+                totalPt += stores[i].pt;
+            }
             document.getElementById('conquered-count').innerText = conquered;
             document.getElementById('total-pt').innerText = totalPt.toLocaleString();
 
-            let rank = "浪人（見習い）";
+            var rank = "浪人（見習い）";
             if (totalPt >= 500) rank = "足軽大将";
             if (totalPt >= 1500) rank = "一城の主";
             if (totalPt >= 3000) rank = "大阪管領";
@@ -391,24 +386,28 @@
         }
 
         async function scanAreaStores() {
-            const btn = document.getElementById('scan-btn');
+            var btn = document.getElementById('scan-btn');
             btn.innerText = "⏳ 偵察中...";
             playSound('select');
 
-            const b = map.getBounds();
-            const query = `[out:json][timeout:10];(node["name"~"マクドナルド|マクド|McDonald"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()});way["name"~"マクドナルド|マクド|McDonald"](${b.getSouth()},${b.getWest()},${b.getNorth()},${b.getEast()}););out center;`;
+            var b = map.getBounds();
+            var bbox = b.getSouth() + "," + b.getWest() + "," + b.getNorth() + "," + b.getEast();
+            var query = '[out:json][timeout:10];(node["name"~"マクドナルド|マクド|McDonald"](' + bbox + ');way["name"~"マクドナルド|マクド|McDonald"](' + bbox + '););out center;';
             
             try {
-                const res = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query));
-                const data = await res.json();
-                let added = 0;
+                var res = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query));
+                var data = await res.json();
+                var added = 0;
 
-                data.elements.forEach(el => {
-                    const lat = el.lat || (el.center && el.center.lat);
-                    const lng = el.lon || (el.center && el.center.lon);
+                data.elements.forEach(function(el) {
+                    var lat = el.lat || (el.center && el.center.lat);
+                    var lng = el.lon || (el.center && el.center.lon);
                     if (!lat || !lng) return;
 
-                    const exists = stores.some(s => Math.abs(s.lat - lat) < 0.0012 && Math.abs(s.lng - lng) < 0.0012);
+                    var exists = stores.some(function(s) {
+                        return Math.abs(s.lat - lat) < 0.0012 && Math.abs(s.lng - lng) < 0.0012;
+                    });
                     if (!exists) {
-                        let rawName = (el.tags && (el.tags.branch || el.tags.name)) || "発見拠点";
-                        rawName = rawName.replace(/マクドナルド|マクド|McDonald's/g, '').trim() || "マクドナル
+                        var rawName = (el.tags && (el.tags.branch || el.tags.name)) || "発見拠点";
+                        rawName = rawName.replace(/マクドナルド|マクド|McDonald's/g, '').trim() || "マクドナルド拠点";
+         
