@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>McDonald's EMPIRES - 10号機</title>
+<title>McDonald's EMPIRES - 11号機</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
@@ -19,18 +19,26 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; f
 .bgm-btn { position: fixed; top: 90px; left: 12px; z-index: 1000; background: rgba(15,15,15,0.95); border: 2px solid #d4af37; color: #ffd700; padding: 9px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
 .side-controls { position: fixed; top: 90px; right: 12px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .ctrl-btn { background: rgba(15,15,15,0.95); border: 2px solid #d4af37; color: #ffd700; padding: 9px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-.bottom-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 92%; max-width: 400px; background: rgba(12,12,12,0.95); border: 2px solid #d4af37; border-radius: 12px; padding: 15px; color: #fff; display: none; text-align: center; }
+
+/* 下部パネル ＆ 閉じるボタン */
+.bottom-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 92%; max-width: 400px; background: rgba(12,12,12,0.95); border: 2px solid #d4af37; border-radius: 12px; padding: 15px; color: #fff; display: none; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.9); }
+.close-panel { position: absolute; top: 8px; right: 12px; background: #333; color: #ffd700; border: 1px solid #d4af37; border-radius: 50%; width: 26px; height: 26px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
 .castle-name { font-size: 18px; color: #ffcc00; margin-bottom: 5px; font-weight: bold; }
 .castle-info { font-size: 12px; color: #ccc; margin-bottom: 12px; }
 .food-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .btn-attack { background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%); color: #ffd700; border: 1px solid #d4af37; padding: 12px 6px; font-size: 13px; font-weight: bold; border-radius: 6px; }
 .btn-attack:disabled { background: #222; color: #666; border-color: #444; }
+
+/* モーダル共通 */
 #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; justify-content: center; align-items: center; }
-.modal-box { width: 85%; max-width: 360px; background: #141414; border: 2px solid #d4af37; border-radius: 12px; padding: 20px; color: #fff; text-align: center; }
+.modal-box { width: 88%; max-width: 380px; max-height: 85vh; overflow-y: auto; background: #141414; border: 2px solid #d4af37; border-radius: 12px; padding: 20px; color: #fff; text-align: center; }
 .modal-title { font-size: 18px; color: #ffd700; margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px; }
 .modal-body { font-size: 13px; color: #ddd; margin-bottom: 18px; line-height: 1.6; text-align: left; }
 .btn-modal-close { background: #333; color: #fff; border: 1px solid #888; padding: 8px 16px; border-radius: 6px; }
 .btn-modal-reset { background: #800; color: #ffcccc; border: 1px solid #f00; padding: 8px 16px; border-radius: 6px; }
+.treasure-item { background: rgba(212,175,55,0.1); border: 1px solid #d4af37; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 12px; }
+
 #cutin { position: fixed; top: 40%; left: 0; right: 0; z-index: 2000; background: rgba(139,0,0,0.95); color: #ffd700; text-align: center; padding: 18px 0; font-size: 22px; font-weight: bold; border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700; display: none; pointer-events: none; }
 </style>
 </head>
@@ -48,6 +56,7 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; f
 </div>
 <div id="map"></div>
 <div id="cutin">完全制圧！</div>
+
 <div id="modal-overlay" onclick="closeMenuDirect()">
   <div class="modal-box" onclick="event.stopPropagation()">
     <div class="modal-title">📜 天下統一・軍略記録</div>
@@ -58,7 +67,9 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; f
     </div>
   </div>
 </div>
+
 <div class="bottom-panel" id="panel">
+  <button class="close-panel" onclick="closePanel()">×</button>
   <div class="castle-name" id="panel-title">拠点名</div>
   <div class="castle-info" id="panel-info">未制圧の拠点</div>
   <div class="food-grid">
@@ -68,6 +79,7 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; f
     <button class="btn-attack" onclick="invade(50,'斥候カフェ')">☕ カフェ (+50)</button>
   </div>
 </div>
+
 <script>
 var sb = document.getElementById('status-bar');
 var AudioCtx = window.AudioContext || window.webkitAudioContext, audioCtx = null, bgmInterval = null, isBgm = false;
@@ -142,11 +154,11 @@ var defStores = [
   { id:"m17", name:"南久宝寺堺筋店", lat:34.6801, lng:135.5061, visits:0, pt:0 },
   { id:"m18", name:"本町店", lat:34.6826, lng:135.4989, visits:0, pt:0 },
   { id:"m19", name:"長堀橋店", lat:34.6746, lng:135.5062, visits:0, pt:0 },
-  { id:"m20", name:"心斎橋北店", lat:34.6765, lng:135.5011, visits:0, pt:0 }
+  { id:"m20", name: "心斎橋北店", lat:34.6765, lng:135.5011, visits:0, pt:0 }
 ];
 
 var stores = defStores;
-try { var sv = JSON.parse(localStorage.getItem('mac_v10')); if (sv && sv.length) stores = sv; } catch(e){}
+try { var sv = JSON.parse(localStorage.getItem('mac_v11')); if (sv && sv.length) stores = sv; } catch(e){}
 var sel = null, markers = {}, circles = {}, userM = null, cool = false, cTimer = null;
 
 function getStat(v) {
@@ -165,7 +177,8 @@ function render() {
     var m = L.circleMarker([s.lat, s.lng], { radius: c?11:9, color: c?'#ffd700':'#00ffcc', fillColor: c?'#ff0000':'#222', fillOpacity:0.95, weight:3 }).addTo(map);
     m.on('click', function() { playSound('select'); selectStore(s); });
     markers[s.id] = m;
-    if (c) circles[s.id] = L.circle([s.lat, s.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:getStat(s.visits).r }).addTo(map);
+    // 【修正】interactive: false を追加して円の向こう側のピンが押せるようにする
+    if (c) circles[s.id] = L.circle([s.lat, s.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:getStat(s.visits).r, interactive: false }).addTo(map);
   });
   updHead();
 }
@@ -178,6 +191,11 @@ function selectStore(s) {
   map.panTo([s.lat, s.lng]);
 }
 
+function closePanel() {
+  playSound('select');
+  document.getElementById('panel').style.display = 'none';
+}
+
 function invade(pt, menu) {
   if (!sel || cool) return;
   cool = true;
@@ -186,10 +204,10 @@ function invade(pt, menu) {
   var first = (sel.visits === 0), oldLv = getStat(sel.visits).lv;
   sel.visits++; sel.pt += pt;
   var ns = getStat(sel.visits);
-  localStorage.setItem('mac_v10', JSON.stringify(stores));
+  localStorage.setItem('mac_v11', JSON.stringify(stores));
   markers[sel.id].setStyle({ color:'#ffd700', fillColor:'#ff0000', radius:11 });
   if (circles[sel.id]) circles[sel.id].setRadius(ns.r);
-  else circles[sel.id] = L.circle([sel.lat, sel.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:ns.r }).addTo(map);
+  else circles[sel.id] = L.circle([sel.lat, sel.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:ns.r, interactive: false }).addTo(map);
   var ci = document.getElementById('cutin');
   if (cTimer) clearTimeout(cTimer);
   playSound((first || ns.lv > oldLv) ? 'levelup' : 'attack');
@@ -222,7 +240,7 @@ function scanAreaStores() {
       var ex = stores.some(function(s){ return Math.abs(s.lat - lat) < 0.0012 && Math.abs(s.lng - lng) < 0.0012; });
       if (!ex) { stores.push({ id:"o_"+el.id, name: t.branch || t.name || "発見拠点", lat:lat, lng:lng, visits:0, pt:0 }); add++; }
     });
-    localStorage.setItem('mac_v10', JSON.stringify(stores)); render();
+    localStorage.setItem('mac_v11', JSON.stringify(stores)); render();
     btn.innerText = "🔍 完了(+" + add + "城)"; sb.innerText = "🟢 新たに " + add + " 城を発見！";
     setTimeout(function(){ btn.innerText = "🔍 周辺を偵察"; }, 2500);
   }).catch(function(){ sb.innerText = "⚠️ 少し地図を拡大して再試行してください"; btn.innerText = "🔍 周辺を偵察"; });
@@ -232,9 +250,36 @@ function openMenu() {
   playSound('select');
   var tv = 0, cc = 0, tp = 0;
   stores.forEach(function(s){ tv += s.visits; if (s.visits > 0) cc++; tp += s.pt; });
-  document.getElementById('modal-stats-text').innerHTML = "<p><b>🚩 初陣:</b> " + localStorage.getItem('mac_start') + "</p><p><b>🏯 制圧拠点:</b> " + cc + " / " + stores.length + " 城</p><p><b>⚔️ 総侵攻回数:</b> " + tv + " 回</p><p><b>💰 総兵力:</b> " + tp.toLocaleString() + " pt</p>";
+  
+  // ポイントに応じた「天下秘宝」の解放判定
+  var treasures = [
+    { pt: 300, name: "🍔 黄金のビッグマック像", desc: "兵力300で解放。輝く純金のパティが士気を高める。" },
+    { pt: 1000, name: "👑 覇王のポテトホルダー", desc: "兵力1000で解放。揚げたての熱を永遠に保つ魔導具。" },
+    { pt: 2500, name: "☕ 秘伝のマックカフェの壺", desc: "兵力2500で解放。極上の香りで全軍の疲労を癒す。" },
+    { pt: 5000, name: "🏆 黄金のゴールデンアーチ旗", desc: "兵力5000で解放。天下統一の覇者のみが掲げられる至宝。" }
+  ];
+  
+  var treasureHtml = "<h4 style='color:#ffd700;margin-top:10px;margin-bottom:6px;'>🎁 解放された天下秘宝</h4>";
+  var unlockedCount = 0;
+  treasures.forEach(function(tr) {
+    if (tp >= tr.pt) {
+      unlockedCount++;
+      treasureHtml += "<div class='treasure-item'><b>" + tr.name + "</b><br><span style='color:#aaa;font-size:11px;'>" + tr.desc + "</span></div>";
+    } else {
+      treasureHtml += "<div class='treasure-item' style='opacity:0.4;'>🔒 ??? (必要兵力: " + tr.pt + " pt)</div>";
+    }
+  });
+
+  document.getElementById('modal-stats-text').innerHTML = 
+    "<p><b>🚩 初陣:</b> " + localStorage.getItem('mac_start') + "</p>" +
+    "<p><b>🏯 制圧拠点:</b> " + cc + " / " + stores.length + " 城</p>" +
+    "<p><b>⚔️ 総侵攻回数:</b> " + tv + " 回</p>" +
+    "<p><b>💰 総兵力:</b> " + tp.toLocaleString() + " pt</p>" +
+    treasureHtml;
+
   document.getElementById('modal-overlay').style.display = 'flex';
 }
+
 function closeMenuDirect() { playSound('select'); document.getElementById('modal-overlay').style.display = 'none'; }
 function confirmReset() {
   if (confirm("【警告】本当にすべての領土と歴史を消去し、最初からやり直しますか？")) {
@@ -252,7 +297,7 @@ function locateUser() {
 }
 
 render();
-sb.innerText = "🟢 10号機稼働中：水色枠のピンをタップして侵攻せよ！";
+sb.innerText = "🟢 11号機稼働中：円の向こうのピンもタップ可能！";
 </script>
 </body>
 </html>
