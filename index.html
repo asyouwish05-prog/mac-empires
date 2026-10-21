@@ -1,416 +1,258 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>McDonald's EMPIRES - 9号機</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; font-family: sans-serif; user-select: none; }
-        
-        #map { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; background: #1a1f2c; }
-        
-        .dark-map-tiles {
-            filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) grayscale(20%);
-        }
-
-        .header {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-            background: rgba(0, 0, 0, 0.9);
-            color: #d4af37; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 2px solid #d4af37;
-        }
-        .title-rank { font-size: 15px; font-weight: bold; }
-        .stats { font-size: 12px; color: #fff; text-align: right; }
-        .stats span { color: #ffcc00; font-weight: bold; font-size: 14px; }
-
-        #status-bar {
-            position: fixed; top: 56px; left: 0; right: 0; z-index: 1000;
-            background: rgba(20, 40, 20, 0.95); color: #00ff88; font-size: 11px;
-            text-align: center; padding: 5px; border-bottom: 1px solid #00ff88;
-        }
-
-        .bgm-btn {
-            position: fixed; top: 90px; left: 12px; z-index: 1000;
-            background: rgba(15, 15, 15, 0.95); border: 2px solid #d4af37;
-            color: #ffd700; padding: 9px 12px; border-radius: 20px;
-            font-size: 12px; font-weight: bold; cursor: pointer;
-        }
-
-        .side-controls {
-            position: fixed; top: 90px; right: 12px; z-index: 1000;
-            display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
-        }
-        .ctrl-btn {
-            background: rgba(15, 15, 15, 0.95); border: 2px solid #d4af37;
-            color: #ffd700; padding: 9px 12px; border-radius: 20px;
-            font-size: 12px; font-weight: bold; cursor: pointer;
-        }
-
-        .bottom-panel {
-            position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;
-            width: 92%; max-width: 400px; background: rgba(12, 12, 12, 0.95);
-            border: 2px solid #d4af37; border-radius: 12px; padding: 15px;
-            color: #fff; display: none; text-align: center;
-        }
-        .castle-name { font-size: 18px; color: #ffcc00; margin-bottom: 5px; font-weight: bold; }
-        .castle-info { font-size: 12px; color: #ccc; margin-bottom: 12px; }
-        
-        .food-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .btn-attack {
-            background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%);
-            color: #ffd700; border: 1px solid #d4af37; padding: 12px 6px;
-            font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer;
-        }
-        .btn-attack:disabled { background: #222; color: #666; border-color: #444; }
-
-        #modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 3000; display: none;
-            justify-content: center; align-items: center;
-        }
-        .modal-box {
-            width: 85%; max-width: 360px; background: #141414; border: 2px solid #d4af37;
-            border-radius: 12px; padding: 20px; color: #fff; text-align: center;
-        }
-        .modal-title { font-size: 18px; color: #ffd700; margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px; }
-        .modal-body { font-size: 13px; color: #ddd; margin-bottom: 18px; line-height: 1.6; text-align: left; }
-        .btn-modal-close { background: #333; color: #fff; border: 1px solid #888; padding: 8px 16px; border-radius: 6px; }
-        .btn-modal-reset { background: #800; color: #ffcccc; border: 1px solid #f00; padding: 8px 16px; border-radius: 6px; }
-
-        #cutin {
-            position: fixed; top: 40%; left: 0; right: 0; z-index: 2000;
-            background: rgba(139,0,0,0.95); color: #ffd700; text-align: center;
-            padding: 18px 0; font-size: 22px; font-weight: bold;
-            border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700;
-            display: none; pointer-events: none;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>McDonald's EMPIRES - 10号機</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; font-family: sans-serif; user-select: none; }
+#map { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; background: #1a1f2c; }
+.dark-map-tiles { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) grayscale(20%); }
+.header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.9); color: #d4af37; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #d4af37; }
+.title-rank { font-size: 15px; font-weight: bold; }
+.stats { font-size: 12px; color: #fff; text-align: right; }
+.stats span { color: #ffcc00; font-weight: bold; font-size: 14px; }
+#status-bar { position: fixed; top: 56px; left: 0; right: 0; z-index: 1000; background: rgba(20,40,20,0.95); color: #00ff88; font-size: 11px; text-align: center; padding: 5px; border-bottom: 1px solid #00ff88; }
+.bgm-btn { position: fixed; top: 90px; left: 12px; z-index: 1000; background: rgba(15,15,15,0.95); border: 2px solid #d4af37; color: #ffd700; padding: 9px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+.side-controls { position: fixed; top: 90px; right: 12px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.ctrl-btn { background: rgba(15,15,15,0.95); border: 2px solid #d4af37; color: #ffd700; padding: 9px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+.bottom-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 92%; max-width: 400px; background: rgba(12,12,12,0.95); border: 2px solid #d4af37; border-radius: 12px; padding: 15px; color: #fff; display: none; text-align: center; }
+.castle-name { font-size: 18px; color: #ffcc00; margin-bottom: 5px; font-weight: bold; }
+.castle-info { font-size: 12px; color: #ccc; margin-bottom: 12px; }
+.food-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-attack { background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%); color: #ffd700; border: 1px solid #d4af37; padding: 12px 6px; font-size: 13px; font-weight: bold; border-radius: 6px; }
+.btn-attack:disabled { background: #222; color: #666; border-color: #444; }
+#modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; justify-content: center; align-items: center; }
+.modal-box { width: 85%; max-width: 360px; background: #141414; border: 2px solid #d4af37; border-radius: 12px; padding: 20px; color: #fff; text-align: center; }
+.modal-title { font-size: 18px; color: #ffd700; margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px; }
+.modal-body { font-size: 13px; color: #ddd; margin-bottom: 18px; line-height: 1.6; text-align: left; }
+.btn-modal-close { background: #333; color: #fff; border: 1px solid #888; padding: 8px 16px; border-radius: 6px; }
+.btn-modal-reset { background: #800; color: #ffcccc; border: 1px solid #f00; padding: 8px 16px; border-radius: 6px; }
+#cutin { position: fixed; top: 40%; left: 0; right: 0; z-index: 2000; background: rgba(139,0,0,0.95); color: #ffd700; text-align: center; padding: 18px 0; font-size: 22px; font-weight: bold; border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700; display: none; pointer-events: none; }
+</style>
 </head>
 <body>
-
-    <div class="header">
-        <div class="title-rank" id="rank-display">【称号】浪人（見習い）</div>
-        <div class="stats">制圧: <span id="conquered-count">0</span>城<br>総兵力: <span id="total-pt">0</span></div>
+<div class="header">
+  <div class="title-rank" id="rank-display">【称号】浪人（見習い）</div>
+  <div class="stats">制圧: <span id="conquered-count">0</span>城<br>総兵力: <span id="total-pt">0</span></div>
+</div>
+<div id="status-bar">⏳ 起動中...</div>
+<button class="bgm-btn" id="bgm-toggle-btn" onclick="toggleBGM()">🎵 BGM: 停止中</button>
+<div class="side-controls">
+  <button class="ctrl-btn" onclick="locateUser()">🎯 現在地へ</button>
+  <button class="ctrl-btn" id="scan-btn" onclick="scanAreaStores()">🔍 周辺を偵察</button>
+  <button class="ctrl-btn" onclick="openMenu()">📜 軍略メニュー</button>
+</div>
+<div id="map"></div>
+<div id="cutin">完全制圧！</div>
+<div id="modal-overlay" onclick="closeMenuDirect()">
+  <div class="modal-box" onclick="event.stopPropagation()">
+    <div class="modal-title">📜 天下統一・軍略記録</div>
+    <div class="modal-body" id="modal-stats-text"></div>
+    <div style="display:flex;justify-content:space-between;">
+      <button class="btn-modal-close" onclick="closeMenuDirect()">閉じる</button>
+      <button class="btn-modal-reset" onclick="confirmReset()">⚠️ 天下布武やり直し</button>
     </div>
+  </div>
+</div>
+<div class="bottom-panel" id="panel">
+  <div class="castle-name" id="panel-title">拠点名</div>
+  <div class="castle-info" id="panel-info">未制圧の拠点</div>
+  <div class="food-grid">
+    <button class="btn-attack" onclick="invade(150,'朝マック奇襲')">☀️ 朝マック (+150)</button>
+    <button class="btn-attack" onclick="invade(100,'主力セット')">🍔 通常セット (+100)</button>
+    <button class="btn-attack" onclick="invade(200,'期間限定')">⚔️ 期間限定 (+200)</button>
+    <button class="btn-attack" onclick="invade(50,'斥候カフェ')">☕ カフェ (+50)</button>
+  </div>
+</div>
+<script>
+var sb = document.getElementById('status-bar');
+var AudioCtx = window.AudioContext || window.webkitAudioContext, audioCtx = null, bgmInterval = null, isBgm = false;
 
-    <div id="status-bar">⏳ システム起動中...</div>
+function playSound(t) {
+  try {
+    if (!audioCtx) audioCtx = new AudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    var now = audioCtx.currentTime;
+    if (t === 'select' || t === 'attack') {
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = t === 'attack' ? 'triangle' : 'sine';
+      o.frequency.setValueAtTime(t === 'attack' ? 160 : 550, now);
+      if (t === 'attack') o.frequency.exponentialRampToValueAtTime(45, now + 0.35);
+      g.gain.setValueAtTime(t === 'attack' ? 0.5 : 0.15, now);
+      g.gain.linearRampToValueAtTime(0.01, now + (t === 'attack' ? 0.35 : 0.06));
+      o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + (t === 'attack' ? 0.35 : 0.06));
+    } else if (t === 'levelup') {
+      [523.2, 659.2, 784.0, 1046.5].forEach(function(f, i) {
+        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(f, now + i * 0.07);
+        g.gain.setValueAtTime(0.18, now + i * 0.07); g.gain.exponentialRampToValueAtTime(0.008, now + i * 0.07 + 0.45);
+        o.connect(g); g.connect(audioCtx.destination); o.start(now + i * 0.07); o.stop(now + i * 0.07 + 0.45);
+      });
+    }
+    if (navigator.vibrate) navigator.vibrate(t === 'levelup' ? [80, 50, 150] : 40);
+  } catch (e) {}
+}
 
-    <button class="bgm-btn" id="bgm-toggle-btn" onclick="toggleBGM()">🎵 BGM: 停止中</button>
+function toggleBGM() {
+  try {
+    if (!audioCtx) audioCtx = new AudioCtx();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    var btn = document.getElementById('bgm-toggle-btn');
+    if (isBgm) { clearInterval(bgmInterval); isBgm = false; btn.innerText = "🎵 BGM: 停止中"; }
+    else {
+      isBgm = true; btn.innerText = "🎵 BGM: 再生中";
+      var notes = [110, 110, 164.8, 110, 130.8, 146.8], s = 0;
+      bgmInterval = setInterval(function() {
+        if (!isBgm) return;
+        var now = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(notes[s++ % notes.length], now);
+        g.gain.setValueAtTime(0.07, now); g.gain.linearRampToValueAtTime(0.001, now + 0.22);
+        o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + 0.22);
+      }, 300);
+    }
+  } catch (e) {}
+}
 
-    <div class="side-controls">
-        <button class="ctrl-btn" onclick="locateUser()">🎯 現在地へ</button>
-        <button class="ctrl-btn" id="scan-btn" onclick="scanAreaStores()">🔍 周辺を偵察</button>
-        <button class="ctrl-btn" onclick="openMenu()">📜 軍略メニュー</button>
-    </div>
+var map = L.map('map', { zoomControl: false }).setView([34.6850, 135.5050], 14);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM', maxZoom: 19, className: 'dark-map-tiles' }).addTo(map);
 
-    <div id="map"></div>
+if (!localStorage.getItem('mac_start')) localStorage.setItem('mac_start', new Date().toLocaleString());
 
-    <div id="cutin">完全制圧！</div>
+var defStores = [
+  { id:"m1", name:"天満駅前店", lat:34.7048, lng:135.5122, visits:0, pt:0 },
+  { id:"m2", name:"扇町店", lat:34.7035, lng:135.5095, visits:0, pt:0 },
+  { id:"m3", name:"梅田茶屋町店", lat:34.7065, lng:135.4988, visits:0, pt:0 },
+  { id:"m4", name:"南森町駅前店", lat:34.6976, lng:135.5113, visits:0, pt:0 },
+  { id:"m5", name:"中崎町駅前店", lat:34.7068, lng:135.5053, visits:0, pt:0 },
+  { id:"m6", name:"新梅田店", lat:34.7032, lng:135.4965, visits:0, pt:0 },
+  { id:"m7", name:"ルクア大阪店", lat:34.7030, lng:135.4950, visits:0, pt:0 },
+  { id:"m8", name:"曽根崎お初天神店", lat:34.7005, lng:135.5008, visits:0, pt:0 },
+  { id:"m9", name:"淀屋橋ネクストワン店", lat:34.6915, lng:135.5015, visits:0, pt:0 },
+  { id:"m10", name:"南海難波駅店", lat:34.6645, lng:135.5015, visits:0, pt:0 },
+  { id:"m11", name:"日本橋三丁目店", lat:34.6628, lng:135.5056, visits:0, pt:0 },
+  { id:"m12", name:"道頓堀店", lat:34.6687, lng:135.5013, visits:0, pt:0 },
+  { id:"m13", name:"心斎橋筋店", lat:34.6715, lng:135.5012, visits:0, pt:0 },
+  { id:"m14", name:"鶴橋駅前店", lat:34.6653, lng:135.5303, visits:0, pt:0 },
+  { id:"m15", name:"京橋駅前店", lat:34.6968, lng:135.5342, visits:0, pt:0 },
+  { id:"m16", name:"天王寺北口店", lat:34.6475, lng:135.5135, visits:0, pt:0 },
+  { id:"m17", name:"南久宝寺堺筋店", lat:34.6801, lng:135.5061, visits:0, pt:0 },
+  { id:"m18", name:"本町店", lat:34.6826, lng:135.4989, visits:0, pt:0 },
+  { id:"m19", name:"長堀橋店", lat:34.6746, lng:135.5062, visits:0, pt:0 },
+  { id:"m20", name:"心斎橋北店", lat:34.6765, lng:135.5011, visits:0, pt:0 }
+];
 
-    <div id="modal-overlay" onclick="closeMenuDirect()">
-        <div class="modal-box" onclick="event.stopPropagation()">
-            <div class="modal-title">📜 天下統一・軍略記録</div>
-            <div class="modal-body" id="modal-stats-text"></div>
-            <div style="display: flex; justify-content: space-between;">
-                <button class="btn-modal-close" onclick="closeMenuDirect()">閉じる</button>
-                <button class="btn-modal-reset" onclick="confirmReset()">⚠️ 天下布武やり直し</button>
-            </div>
-        </div>
-    </div>
+var stores = defStores;
+try { var sv = JSON.parse(localStorage.getItem('mac_v10')); if (sv && sv.length) stores = sv; } catch(e){}
+var sel = null, markers = {}, circles = {}, userM = null, cool = false, cTimer = null;
 
-    <div class="bottom-panel" id="panel">
-        <div class="castle-name" id="panel-title">拠点名</div>
-        <div class="castle-info" id="panel-info">未制圧の拠点</div>
-        <div class="food-grid">
-            <button class="btn-attack" onclick="invade(150, '朝マック奇襲')">☀️ 朝マック (+150)</button>
-            <button class="btn-attack" onclick="invade(100, '主力セット')">🍔 通常セット (+100)</button>
-            <button class="btn-attack" onclick="invade(200, '期間限定')">⚔️ 期間限定 (+200)</button>
-            <button class="btn-attack" onclick="invade(50, '斥候カフェ')">☕ カフェ (+50)</button>
-        </div>
-    </div>
+function getStat(v) {
+  if (!v) return { lv:0, t:"未制圧", r:0 };
+  if (v < 3) return { lv:1, t:"前線陣地", r:300 };
+  if (v < 7) return { lv:2, t:"監視砦", r:500 };
+  if (v < 15) return { lv:3, t:"要塞都市", r:800 };
+  if (v < 30) return { lv:4, t:"大都督府", r:1200 };
+  return { lv:5, t:"覇王の王都", r:2000 };
+}
 
-    <!-- 独立したエラー検知ブロック（メインスクリプトの文法エラーも捕捉する） -->
-    <script>
-        window.onerror = function(msg, url, line) {
-            var sb = document.getElementById('status-bar');
-            if (sb) {
-                sb.style.background = '#900';
-                sb.style.color = '#fff';
-                sb.innerText = '⚠️ エラー(行:' + line + '): ' + msg;
-            }
-        };
-    </script>
+function render() {
+  stores.forEach(function(s) {
+    if (markers[s.id]) return;
+    var c = s.visits > 0;
+    var m = L.circleMarker([s.lat, s.lng], { radius: c?11:9, color: c?'#ffd700':'#00ffcc', fillColor: c?'#ff0000':'#222', fillOpacity:0.95, weight:3 }).addTo(map);
+    m.on('click', function() { playSound('select'); selectStore(s); });
+    markers[s.id] = m;
+    if (c) circles[s.id] = L.circle([s.lat, s.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:getStat(s.visits).r }).addTo(map);
+  });
+  updHead();
+}
 
-    <!-- メインプログラム -->
-    <script>
-        var statusBar = document.getElementById('status-bar');
-        statusBar.innerText = "⏳ マップエンジン初期化中...";
+function selectStore(s) {
+  sel = s; var st = getStat(s.visits);
+  document.getElementById('panel').style.display = 'block';
+  document.getElementById('panel-title').innerText = "🏯 " + s.name;
+  document.getElementById('panel-info').innerText = s.visits ? ("Lv." + st.lv + " " + st.t + " (侵攻:" + s.visits + "回 / 半径:" + st.r + "m)") : "状態：未制圧 ｜ 兵糧を選んで制圧せよ";
+  map.panTo([s.lat, s.lng]);
+}
 
-        var AudioCtx = window.AudioContext || window.webkitAudioContext;
-        var audioCtx = null;
-        var bgmInterval = null;
-        var isBgmPlaying = false;
+function invade(pt, menu) {
+  if (!sel || cool) return;
+  cool = true;
+  var btns = document.querySelectorAll('.btn-attack');
+  btns.forEach(function(b){ b.disabled = true; });
+  var first = (sel.visits === 0), oldLv = getStat(sel.visits).lv;
+  sel.visits++; sel.pt += pt;
+  var ns = getStat(sel.visits);
+  localStorage.setItem('mac_v10', JSON.stringify(stores));
+  markers[sel.id].setStyle({ color:'#ffd700', fillColor:'#ff0000', radius:11 });
+  if (circles[sel.id]) circles[sel.id].setRadius(ns.r);
+  else circles[sel.id] = L.circle([sel.lat, sel.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:ns.r }).addTo(map);
+  var ci = document.getElementById('cutin');
+  if (cTimer) clearTimeout(cTimer);
+  playSound((first || ns.lv > oldLv) ? 'levelup' : 'attack');
+  ci.innerText = first ? (sel.name + "、完全制圧！") : (ns.lv > oldLv ? ("城郭進化！【" + ns.t + "】") : (menu + "で内政強化！"));
+  ci.style.display = 'block';
+  selectStore(sel); updHead();
+  cTimer = setTimeout(function() { ci.style.display = 'none'; cool = false; btns.forEach(function(b){ b.disabled = false; }); }, 1500);
+}
 
-        function playSound(type) {
-            try {
-                if (!audioCtx) audioCtx = new AudioCtx();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                var now = audioCtx.currentTime;
-                if (type === 'select') {
-                    var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-                    osc.frequency.setValueAtTime(550, now);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
-                    osc.connect(gain); gain.connect(audioCtx.destination);
-                    osc.start(now); osc.stop(now + 0.06);
-                } else if (type === 'attack') {
-                    var osc2 = audioCtx.createOscillator(), gain2 = audioCtx.createGain();
-                    osc2.type = 'triangle';
-                    osc2.frequency.setValueAtTime(160, now);
-                    osc2.frequency.exponentialRampToValueAtTime(45, now + 0.35);
-                    gain2.gain.setValueAtTime(0.5, now);
-                    gain2.gain.linearRampToValueAtTime(0.01, now + 0.35);
-                    osc2.connect(gain2); gain2.connect(audioCtx.destination);
-                    osc2.start(now); osc2.stop(now + 0.35);
-                } else if (type === 'levelup') {
-                    var freqs = [523.25, 659.25, 783.99, 1046.50];
-                    for (var i = 0; i < freqs.length; i++) {
-                        var osc3 = audioCtx.createOscillator(), gain3 = audioCtx.createGain();
-                        osc3.type = 'sawtooth';
-                        osc3.frequency.setValueAtTime(freqs[i], now + i * 0.07);
-                        gain3.gain.setValueAtTime(0.18, now + i * 0.07);
-                        gain3.gain.exponentialRampToValueAtTime(0.008, now + i * 0.07 + 0.45);
-                        osc3.connect(gain3); gain3.connect(audioCtx.destination);
-                        osc3.start(now + i * 0.07); osc3.stop(now + i * 0.07 + 0.45);
-                    }
-                }
-                if (navigator.vibrate) navigator.vibrate(type === 'levelup' ? [80, 50, 150] : 40);
-            } catch (e) {}
-        }
+function updHead() {
+  var c = 0, p = 0;
+  stores.forEach(function(s){ if (s.visits > 0) c++; p += s.pt; });
+  document.getElementById('conquered-count').innerText = c;
+  document.getElementById('total-pt').innerText = p.toLocaleString();
+  var r = p>=5000 ? "天下無双の覇王" : p>=3000 ? "大阪管領" : p>=1500 ? "一城の主" : p>=500 ? "足軽大将" : "浪人（見習い）";
+  document.getElementById('rank-display').innerText = "【称号】" + r;
+}
 
-        function toggleBGM() {
-            try {
-                if (!audioCtx) audioCtx = new AudioCtx();
-                if (audioCtx.state === 'suspended') audioCtx.resume();
-                var btn = document.getElementById('bgm-toggle-btn');
-                if (isBgmPlaying) {
-                    clearInterval(bgmInterval);
-                    isBgmPlaying = false;
-                    btn.innerText = "🎵 BGM: 停止中";
-                } else {
-                    isBgmPlaying = true;
-                    btn.innerText = "🎵 BGM: 再生中";
-                    var notes = [110, 110, 164.81, 110, 130.81, 146.83];
-                    var step = 0;
-                    bgmInterval = setInterval(function() {
-                        if (!isBgmPlaying) return;
-                        var now = audioCtx.currentTime;
-                        var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-                        osc.type = 'sawtooth';
-                        osc.frequency.setValueAtTime(notes[step % notes.length], now);
-                        gain.gain.setValueAtTime(0.07, now);
-                        gain.gain.linearRampToValueAtTime(0.001, now + 0.22);
-                        osc.connect(gain); gain.connect(audioCtx.destination);
-                        osc.start(now); osc.stop(now + 0.22);
-                        step++;
-                    }, 300);
-                }
-            } catch (e) {}
-        }
+function scanAreaStores() {
+  var btn = document.getElementById('scan-btn'); btn.innerText = "⏳ 偵察中..."; playSound('select');
+  var b = map.getBounds(), bx = b.getSouth() + "," + b.getWest() + "," + b.getNorth() + "," + b.getEast();
+  var q = "[out:json][timeout:10];(node[amenity=fast_food](" + bx + ");way[amenity=fast_food](" + bx + "););out center;";
+  fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q)).then(function(r){ return r.json(); }).then(function(d) {
+    var add = 0;
+    (d.elements || []).forEach(function(el) {
+      var t = el.tags || {}, n = (t.name||"") + (t.branch||"") + (t.brand||"");
+      if (n.indexOf("マクド") === -1 && n.indexOf("McDonald") === -1) return;
+      var lat = el.lat || (el.center && el.center.lat), lng = el.lon || (el.center && el.center.lon);
+      if (!lat || !lng) return;
+      var ex = stores.some(function(s){ return Math.abs(s.lat - lat) < 0.0012 && Math.abs(s.lng - lng) < 0.0012; });
+      if (!ex) { stores.push({ id:"o_"+el.id, name: t.branch || t.name || "発見拠点", lat:lat, lng:lng, visits:0, pt:0 }); add++; }
+    });
+    localStorage.setItem('mac_v10', JSON.stringify(stores)); render();
+    btn.innerText = "🔍 完了(+" + add + "城)"; sb.innerText = "🟢 新たに " + add + " 城を発見！";
+    setTimeout(function(){ btn.innerText = "🔍 周辺を偵察"; }, 2500);
+  }).catch(function(){ sb.innerText = "⚠️ 少し地図を拡大して再試行してください"; btn.innerText = "🔍 周辺を偵察"; });
+}
 
-        var map = L.map('map', { zoomControl: false }).setView([34.6850, 135.5050], 14);
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'OpenStreetMap', maxZoom: 19, className: 'dark-map-tiles'
-        }).addTo(map);
+function openMenu() {
+  playSound('select');
+  var tv = 0, cc = 0, tp = 0;
+  stores.forEach(function(s){ tv += s.visits; if (s.visits > 0) cc++; tp += s.pt; });
+  document.getElementById('modal-stats-text').innerHTML = "<p><b>🚩 初陣:</b> " + localStorage.getItem('mac_start') + "</p><p><b>🏯 制圧拠点:</b> " + cc + " / " + stores.length + " 城</p><p><b>⚔️ 総侵攻回数:</b> " + tv + " 回</p><p><b>💰 総兵力:</b> " + tp.toLocaleString() + " pt</p>";
+  document.getElementById('modal-overlay').style.display = 'flex';
+}
+function closeMenuDirect() { playSound('select'); document.getElementById('modal-overlay').style.display = 'none'; }
+function confirmReset() {
+  if (confirm("【警告】本当にすべての領土と歴史を消去し、最初からやり直しますか？")) {
+    if (confirm("【最終確認】元に戻せません。本当にリセットしますか？")) { localStorage.clear(); location.reload(); }
+  }
+}
+function locateUser() {
+  playSound('select'); sb.innerText = "⏳ GPS特定中...";
+  navigator.geolocation.getCurrentPosition(function(p) {
+    var lt = p.coords.latitude, lg = p.coords.longitude;
+    if (userM) userM.setLatLng([lt, lg]);
+    else userM = L.circleMarker([lt, lg], { radius:8, color:'#fff', fillColor:'#0088ff', fillOpacity:1, weight:3 }).addTo(map);
+    map.setView([lt, lg], 16); sb.innerText = "🟢 現在地へ移動完了！";
+  }, function(){ sb.innerText = "⚠️ GPS許可を確認してください"; }, { enableHighAccuracy:true });
+}
 
-        var userMarker = null;
-        var isCooldown = false;
-        var cutinTimer = null;
-
-        try {
-            if (!localStorage.getItem('mac_empires_start_date')) {
-                localStorage.setItem('mac_empires_start_date', new Date().toLocaleString());
-            }
-        } catch (e) {}
-
-        var defaultStores = [
-            { id: "m1", name: "天満駅前店", lat: 34.7048, lng: 135.5122, visits: 0, pt: 0 },
-            { id: "m2", name: "扇町店", lat: 34.7035, lng: 135.5095, visits: 0, pt: 0 },
-            { id: "m3", name: "梅田茶屋町店", lat: 34.7065, lng: 135.4988, visits: 0, pt: 0 },
-            { id: "m4", name: "南森町駅前店", lat: 34.6976, lng: 135.5113, visits: 0, pt: 0 },
-            { id: "m5", name: "中崎町駅前店", lat: 34.7068, lng: 135.5053, visits: 0, pt: 0 },
-            { id: "m6", name: "新梅田店", lat: 34.7032, lng: 135.4965, visits: 0, pt: 0 },
-            { id: "m7", name: "ルクア大阪店", lat: 34.7030, lng: 135.4950, visits: 0, pt: 0 },
-            { id: "m8", name: "曽根崎お初天神店", lat: 34.7005, lng: 135.5008, visits: 0, pt: 0 },
-            { id: "m9", name: "淀屋橋ネクストワン店", lat: 34.6915, lng: 135.5015, visits: 0, pt: 0 },
-            { id: "m10", name: "南海難波駅店", lat: 34.6645, lng: 135.5015, visits: 0, pt: 0 },
-            { id: "m11", name: "日本橋三丁目店", lat: 34.6628, lng: 135.5056, visits: 0, pt: 0 },
-            { id: "m12", name: "道頓堀店", lat: 34.6687, lng: 135.5013, visits: 0, pt: 0 },
-            { id: "m13", name: "心斎橋筋店", lat: 34.6715, lng: 135.5012, visits: 0, pt: 0 },
-            { id: "m14", name: "鶴橋駅前店", lat: 34.6653, lng: 135.5303, visits: 0, pt: 0 },
-            { id: "m15", name: "京橋駅前店", lat: 34.6968, lng: 135.5342, visits: 0, pt: 0 },
-            { id: "m16", name: "天王寺北口店", lat: 34.6475, lng: 135.5135, visits: 0, pt: 0 },
-            { id: "m17", name: "南久宝寺堺筋店", lat: 34.6801, lng: 135.5061, visits: 0, pt: 0 },
-            { id: "m18", name: "本町店", lat: 34.6826, lng: 135.4989, visits: 0, pt: 0 },
-            { id: "m19", name: "長堀橋店", lat: 34.6746, lng: 135.5062, visits: 0, pt: 0 },
-            { id: "m20", name: "心斎橋北店", lat: 34.6765, lng: 135.5011, visits: 0, pt: 0 }
-        ];
-
-        var stores = defaultStores;
-        try {
-            var saved = JSON.parse(localStorage.getItem('mac_empires_v9'));
-            if (saved && Array.isArray(saved)) stores = saved;
-        } catch (e) {}
-
-        var selectedStore = null;
-        var markers = {};
-        var circles = {};
-
-        function getCastleStatus(visits) {
-            if (visits === 0) return { lv: 0, title: "未制圧", radius: 0 };
-            if (visits < 3)  return { lv: 1, title: "前線陣地", radius: 300 };
-            if (visits < 7)  return { lv: 2, title: "監視砦", radius: 500 };
-            if (visits < 15) return { lv: 3, title: "要塞都市", radius: 800 };
-            if (visits < 30) return { lv: 4, title: "大都督府", radius: 1200 };
-            return { lv: 5, title: "覇王の王都（永久不落）", radius: 2000 };
-        }
-
-        function renderStores() {
-            for (var i = 0; i < stores.length; i++) {
-                (function(store) {
-                    if (markers[store.id]) return;
-                    var isConquered = store.visits > 0;
-                    var marker = L.circleMarker([store.lat, store.lng], {
-                        radius: isConquered ? 11 : 9,
-                        color: isConquered ? '#ffd700' : '#00ffcc',
-                        fillColor: isConquered ? '#ff0000' : '#222222',
-                        fillOpacity: 0.95, weight: 3
-                    }).addTo(map);
-
-                    marker.on('click', function() {
-                        playSound('select');
-                        selectStore(store);
-                    });
-                    markers[store.id] = marker;
-
-                    if (isConquered) {
-                        var status = getCastleStatus(store.visits);
-                        circles[store.id] = L.circle([store.lat, store.lng], {
-                            color: '#d4af37', weight: 1, fillColor: '#ffcc00', fillOpacity: 0.25, radius: status.radius
-                        }).addTo(map);
-                    }
-                })(stores[i]);
-            }
-            updateHeader();
-        }
-
-        renderStores();
-        statusBar.innerText = "🟢 9号機稼働中：水色枠のピンをタップして侵攻せよ！";
-
-        function selectStore(store) {
-            selectedStore = store;
-            var status = getCastleStatus(store.visits);
-            document.getElementById('panel').style.display = 'block';
-            document.getElementById('panel-title').innerText = "🏯 " + store.name;
-            if (store.visits === 0) {
-                document.getElementById('panel-info').innerText = "状態：未制圧 ｜ 兵糧を選んで制圧せよ";
-            } else {
-                document.getElementById('panel-info').innerText = 
-                    "Lv." + status.lv + " " + status.title + " (侵攻:" + store.visits + "回 / 半径:" + status.radius + "m)";
-            }
-            map.panTo([store.lat, store.lng]);
-        }
-
-        function invade(points, menuName) {
-            if (!selectedStore || isCooldown) return;
-
-            isCooldown = true;
-            var buttons = document.querySelectorAll('.btn-attack');
-            for (var i = 0; i < buttons.length; i++) buttons[i].disabled = true;
-
-            var isFirst = (selectedStore.visits === 0);
-            var oldLv = getCastleStatus(selectedStore.visits).lv;
-
-            selectedStore.visits += 1;
-            selectedStore.pt += points;
-            var newStatus = getCastleStatus(selectedStore.visits);
-
-            try { localStorage.setItem('mac_empires_v9', JSON.stringify(stores)); } catch (e) {}
-
-            markers[selectedStore.id].setStyle({ color: '#ffd700', fillColor: '#ff0000', radius: 11 });
-            if (circles[selectedStore.id]) {
-                circles[selectedStore.id].setRadius(newStatus.radius);
-            } else {
-                circles[selectedStore.id] = L.circle([selectedStore.lat, selectedStore.lng], {
-                    color: '#d4af37', weight: 1, fillColor: '#ffcc00', fillOpacity: 0.25, radius: newStatus.radius
-                }).addTo(map);
-            }
-
-            var cutin = document.getElementById('cutin');
-            if (cutinTimer) clearTimeout(cutinTimer);
-
-            if (isFirst) {
-                playSound('levelup');
-                cutin.innerText = selectedStore.name + "、完全制圧！";
-            } else if (newStatus.lv > oldLv) {
-                playSound('levelup');
-                cutin.innerText = "城郭進化！【" + newStatus.title + "】";
-            } else {
-                playSound('attack');
-                cutin.innerText = menuName + "により内政強化！";
-            }
-            cutin.style.display = 'block';
-
-            selectStore(selectedStore);
-            updateHeader();
-
-            cutinTimer = setTimeout(function() {
-                cutin.style.display = 'none';
-                isCooldown = false;
-                for (var j = 0; j < buttons.length; j++) buttons[j].disabled = false;
-            }, 1500);
-        }
-
-        function updateHeader() {
-            var conquered = 0;
-            var totalPt = 0;
-            for (var i = 0; i < stores.length; i++) {
-                if (stores[i].visits > 0) conquered++;
-                totalPt += stores[i].pt;
-            }
-            document.getElementById('conquered-count').innerText = conquered;
-            document.getElementById('total-pt').innerText = totalPt.toLocaleString();
-
-            var rank = "浪人（見習い）";
-            if (totalPt >= 500) rank = "足軽大将";
-            if (totalPt >= 1500) rank = "一城の主";
-            if (totalPt >= 3000) rank = "大阪管領";
-            if (totalPt >= 5000) rank = "天下無双の覇王";
-            document.getElementById('rank-display').innerText = "【称号】" + rank;
-        }
-
-        // クォーテーション記号のネストを完全排除した安全な偵察関数
-        function scanAreaStores() {
-            var btn = document.getElementById('scan-btn');
-            btn.innerText = "⏳ 偵察中...";
-            playSound('select');
-
-            var b = map.getBounds();
-            var bbox = b.getSouth() + "," + b.getWest() + "," + b.getNorth() + "," + b.getEast();
-            var q = "[out:json][timeout:10];(node[amenity=fast_food](" + bbox + ");way[amenity=fast_food](" + bbox + "););out center;";
-            
-            fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q))
-                .then(function(res) { return res.json(); })
-                .then(function(data) {
-                    var added = 0;
-                    var els = data.elements || [];
-                    for (var i = 0; i < els.length; i++) {
-                        var el = els[i];
-                        var t = el.tags || {};
-                        var n = (t.name || "") + (t.branch || "") + (t.brand || "");
-                        if (n.indexOf("マクド") === -1 && n.indexOf("McDonald") === -1) continue;
-
-                        va
+render();
+sb.innerText = "🟢 10号機稼働中：水色枠のピンをタップして侵攻せよ！";
+</script>
+</body>
+</html>
