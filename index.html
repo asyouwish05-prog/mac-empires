@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>McDonald's EMPIRES - 8号機</title>
-    <!-- 超安定サーバー(Cloudflare)から地図システムを読み込み -->
+    <title>McDonald's EMPIRES - 9号機</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
     <style>
@@ -133,13 +132,22 @@
         </div>
     </div>
 
+    <!-- 独立したエラー検知ブロック（メインスクリプトの文法エラーも捕捉する） -->
+    <script>
+        window.onerror = function(msg, url, line) {
+            var sb = document.getElementById('status-bar');
+            if (sb) {
+                sb.style.background = '#900';
+                sb.style.color = '#fff';
+                sb.innerText = '⚠️ エラー(行:' + line + '): ' + msg;
+            }
+        };
+    </script>
+
+    <!-- メインプログラム -->
     <script>
         var statusBar = document.getElementById('status-bar');
-        window.onerror = function(msg, url, line) {
-            statusBar.style.background = '#800';
-            statusBar.style.color = '#fff';
-            statusBar.innerText = '⚠️ エラー(行:' + line + '): ' + msg;
-        };
+        statusBar.innerText = "⏳ マップエンジン初期化中...";
 
         var AudioCtx = window.AudioContext || window.webkitAudioContext;
         var audioCtx = null;
@@ -213,23 +221,20 @@
             } catch (e) {}
         }
 
-        if (typeof L === 'undefined') {
-            statusBar.style.background = '#800';
-            statusBar.innerText = '⚠️ 地図ライブラリの通信に失敗しました。再読み込みしてください';
-        }
-
         var map = L.map('map', { zoomControl: false }).setView([34.6850, 135.5050], 14);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap', maxZoom: 19, className: 'dark-map-tiles'
+            attribution: 'OpenStreetMap', maxZoom: 19, className: 'dark-map-tiles'
         }).addTo(map);
 
         var userMarker = null;
         var isCooldown = false;
         var cutinTimer = null;
 
-        if (!localStorage.getItem('mac_empires_start_date')) {
-            localStorage.setItem('mac_empires_start_date', new Date().toLocaleString());
-        }
+        try {
+            if (!localStorage.getItem('mac_empires_start_date')) {
+                localStorage.setItem('mac_empires_start_date', new Date().toLocaleString());
+            }
+        } catch (e) {}
 
         var defaultStores = [
             { id: "m1", name: "天満駅前店", lat: 34.7048, lng: 135.5122, visits: 0, pt: 0 },
@@ -256,7 +261,7 @@
 
         var stores = defaultStores;
         try {
-            var saved = JSON.parse(localStorage.getItem('mac_empires_v8'));
+            var saved = JSON.parse(localStorage.getItem('mac_empires_v9'));
             if (saved && Array.isArray(saved)) stores = saved;
         } catch (e) {}
 
@@ -274,34 +279,36 @@
         }
 
         function renderStores() {
-            stores.forEach(function(store) {
-                if (markers[store.id]) return;
-                var isConquered = store.visits > 0;
-                var marker = L.circleMarker([store.lat, store.lng], {
-                    radius: isConquered ? 11 : 9,
-                    color: isConquered ? '#ffd700' : '#00ffcc',
-                    fillColor: isConquered ? '#ff0000' : '#222222',
-                    fillOpacity: 0.95, weight: 3
-                }).addTo(map);
-
-                marker.on('click', function() {
-                    playSound('select');
-                    selectStore(store);
-                });
-                markers[store.id] = marker;
-
-                if (isConquered) {
-                    var status = getCastleStatus(store.visits);
-                    circles[store.id] = L.circle([store.lat, store.lng], {
-                        color: '#d4af37', weight: 1, fillColor: '#ffcc00', fillOpacity: 0.25, radius: status.radius
+            for (var i = 0; i < stores.length; i++) {
+                (function(store) {
+                    if (markers[store.id]) return;
+                    var isConquered = store.visits > 0;
+                    var marker = L.circleMarker([store.lat, store.lng], {
+                        radius: isConquered ? 11 : 9,
+                        color: isConquered ? '#ffd700' : '#00ffcc',
+                        fillColor: isConquered ? '#ff0000' : '#222222',
+                        fillOpacity: 0.95, weight: 3
                     }).addTo(map);
-                }
-            });
+
+                    marker.on('click', function() {
+                        playSound('select');
+                        selectStore(store);
+                    });
+                    markers[store.id] = marker;
+
+                    if (isConquered) {
+                        var status = getCastleStatus(store.visits);
+                        circles[store.id] = L.circle([store.lat, store.lng], {
+                            color: '#d4af37', weight: 1, fillColor: '#ffcc00', fillOpacity: 0.25, radius: status.radius
+                        }).addTo(map);
+                    }
+                })(stores[i]);
+            }
             updateHeader();
         }
 
         renderStores();
-        statusBar.innerText = "🟢 8号機稼働中：城ピンをタップして侵攻せよ！";
+        statusBar.innerText = "🟢 9号機稼働中：水色枠のピンをタップして侵攻せよ！";
 
         function selectStore(store) {
             selectedStore = store;
@@ -331,7 +338,7 @@
             selectedStore.pt += points;
             var newStatus = getCastleStatus(selectedStore.visits);
 
-            localStorage.setItem('mac_empires_v8', JSON.stringify(stores));
+            try { localStorage.setItem('mac_empires_v9', JSON.stringify(stores)); } catch (e) {}
 
             markers[selectedStore.id].setStyle({ color: '#ffd700', fillColor: '#ff0000', radius: 11 });
             if (circles[selectedStore.id]) {
@@ -385,29 +392,25 @@
             document.getElementById('rank-display').innerText = "【称号】" + rank;
         }
 
-        async function scanAreaStores() {
+        // クォーテーション記号のネストを完全排除した安全な偵察関数
+        function scanAreaStores() {
             var btn = document.getElementById('scan-btn');
             btn.innerText = "⏳ 偵察中...";
             playSound('select');
 
             var b = map.getBounds();
             var bbox = b.getSouth() + "," + b.getWest() + "," + b.getNorth() + "," + b.getEast();
-            var query = '[out:json][timeout:10];(node["name"~"マクドナルド|マクド|McDonald"](' + bbox + ');way["name"~"マクドナルド|マクド|McDonald"](' + bbox + '););out center;';
+            var q = "[out:json][timeout:10];(node[amenity=fast_food](" + bbox + ");way[amenity=fast_food](" + bbox + "););out center;";
             
-            try {
-                var res = await fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query));
-                var data = await res.json();
-                var added = 0;
+            fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q))
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    var added = 0;
+                    var els = data.elements || [];
+                    for (var i = 0; i < els.length; i++) {
+                        var el = els[i];
+                        var t = el.tags || {};
+                        var n = (t.name || "") + (t.branch || "") + (t.brand || "");
+                        if (n.indexOf("マクド") === -1 && n.indexOf("McDonald") === -1) continue;
 
-                data.elements.forEach(function(el) {
-                    var lat = el.lat || (el.center && el.center.lat);
-                    var lng = el.lon || (el.center && el.center.lon);
-                    if (!lat || !lng) return;
-
-                    var exists = stores.some(function(s) {
-                        return Math.abs(s.lat - lat) < 0.0012 && Math.abs(s.lng - lng) < 0.0012;
-                    });
-                    if (!exists) {
-                        var rawName = (el.tags && (el.tags.branch || el.tags.name)) || "発見拠点";
-                        rawName = rawName.replace(/マクドナルド|マクド|McDonald's/g, '').trim() || "マクドナルド拠点";
-         
+                        va
