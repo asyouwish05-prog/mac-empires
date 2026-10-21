@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>McDonald's EMPIRES - 11号機</title>
+<title>McDonald's EMPIRES - 12号機</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
@@ -11,6 +11,7 @@
 body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; font-family: sans-serif; user-select: none; }
 #map { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; background: #1a1f2c; }
 .dark-map-tiles { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) grayscale(20%); }
+
 .header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.9); color: #d4af37; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #d4af37; }
 .title-rank { font-size: 15px; font-weight: bold; }
 .stats { font-size: 12px; color: #fff; text-align: right; }
@@ -20,6 +21,26 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; f
 .side-controls { position: fixed; top: 90px; right: 12px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
 .ctrl-btn { background: rgba(15,15,15,0.95); border: 2px solid #d4af37; color: #ffd700; padding: 9px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
 
+/* 【店名常時表示ラベル】ピンの真下に表示されるネームプレート */
+.store-label {
+    background: rgba(10, 14, 23, 0.85);
+    border: 1px solid #d4af37;
+    color: #ffd700;
+    font-size: 10px;
+    font-weight: bold;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.8);
+    transform: translate(-50%, 4px);
+}
+.store-label.conquered {
+    background: rgba(139, 0, 0, 0.9);
+    border-color: #ffd700;
+    color: #fff;
+}
+
 /* 下部パネル ＆ 閉じるボタン */
 .bottom-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 92%; max-width: 400px; background: rgba(12,12,12,0.95); border: 2px solid #d4af37; border-radius: 12px; padding: 15px; color: #fff; display: none; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.9); }
 .close-panel { position: absolute; top: 8px; right: 12px; background: #333; color: #ffd700; border: 1px solid #d4af37; border-radius: 50%; width: 26px; height: 26px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -27,7 +48,10 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; f
 .castle-name { font-size: 18px; color: #ffcc00; margin-bottom: 5px; font-weight: bold; }
 .castle-info { font-size: 12px; color: #ccc; margin-bottom: 12px; }
 .food-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.btn-attack { background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%); color: #ffd700; border: 1px solid #d4af37; padding: 12px 6px; font-size: 13px; font-weight: bold; border-radius: 6px; }
+
+/* 【超高速化】押した瞬間に即座に反応するボタン */
+.btn-attack { background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%); color: #ffd700; border: 1px solid #d4af37; padding: 12px 6px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: transform 0.05s; }
+.btn-attack:active { transform: scale(0.94); }
 .btn-attack:disabled { background: #222; color: #666; border-color: #444; }
 
 /* モーダル共通 */
@@ -35,11 +59,11 @@ body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; f
 .modal-box { width: 88%; max-width: 380px; max-height: 85vh; overflow-y: auto; background: #141414; border: 2px solid #d4af37; border-radius: 12px; padding: 20px; color: #fff; text-align: center; }
 .modal-title { font-size: 18px; color: #ffd700; margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px; }
 .modal-body { font-size: 13px; color: #ddd; margin-bottom: 18px; line-height: 1.6; text-align: left; }
-.btn-modal-close { background: #333; color: #fff; border: 1px solid #888; padding: 8px 16px; border-radius: 6px; }
-.btn-modal-reset { background: #800; color: #ffcccc; border: 1px solid #f00; padding: 8px 16px; border-radius: 6px; }
+.btn-modal-close { background: #333; color: #fff; border: 1px solid #888; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+.btn-modal-reset { background: #800; color: #ffcccc; border: 1px solid #f00; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
 .treasure-item { background: rgba(212,175,55,0.1); border: 1px solid #d4af37; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 12px; }
 
-#cutin { position: fixed; top: 40%; left: 0; right: 0; z-index: 2000; background: rgba(139,0,0,0.95); color: #ffd700; text-align: center; padding: 18px 0; font-size: 22px; font-weight: bold; border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700; display: none; pointer-events: none; }
+#cutin { position: fixed; top: 40%; left: 0; right: 0; z-index: 2000; background: rgba(139,0,0,0.95); color: #ffd700; text-align: center; padding: 16px 0; font-size: 20px; font-weight: bold; border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700; display: none; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -93,19 +117,19 @@ function playSound(t) {
       var o = audioCtx.createOscillator(), g = audioCtx.createGain();
       o.type = t === 'attack' ? 'triangle' : 'sine';
       o.frequency.setValueAtTime(t === 'attack' ? 160 : 550, now);
-      if (t === 'attack') o.frequency.exponentialRampToValueAtTime(45, now + 0.35);
-      g.gain.setValueAtTime(t === 'attack' ? 0.5 : 0.15, now);
-      g.gain.linearRampToValueAtTime(0.01, now + (t === 'attack' ? 0.35 : 0.06));
-      o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + (t === 'attack' ? 0.35 : 0.06));
+      if (t === 'attack') o.frequency.exponentialRampToValueAtTime(45, now + 0.2);
+      g.gain.setValueAtTime(t === 'attack' ? 0.3 : 0.1, now);
+      g.gain.linearRampToValueAtTime(0.01, now + (t === 'attack' ? 0.2 : 0.04));
+      o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + (t === 'attack' ? 0.2 : 0.04));
     } else if (t === 'levelup') {
       [523.2, 659.2, 784.0, 1046.5].forEach(function(f, i) {
         var o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        o.type = 'sawtooth'; o.frequency.setValueAtTime(f, now + i * 0.07);
-        g.gain.setValueAtTime(0.18, now + i * 0.07); g.gain.exponentialRampToValueAtTime(0.008, now + i * 0.07 + 0.45);
-        o.connect(g); g.connect(audioCtx.destination); o.start(now + i * 0.07); o.stop(now + i * 0.07 + 0.45);
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(f, now + i * 0.05);
+        g.gain.setValueAtTime(0.15, now + i * 0.05); g.gain.exponentialRampToValueAtTime(0.008, now + i * 0.05 + 0.3);
+        o.connect(g); g.connect(audioCtx.destination); o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.3);
       });
     }
-    if (navigator.vibrate) navigator.vibrate(t === 'levelup' ? [80, 50, 150] : 40);
+    if (navigator.vibrate) navigator.vibrate(t === 'levelup' ? [50, 30, 100] : 25);
   } catch (e) {}
 }
 
@@ -154,11 +178,11 @@ var defStores = [
   { id:"m17", name:"南久宝寺堺筋店", lat:34.6801, lng:135.5061, visits:0, pt:0 },
   { id:"m18", name:"本町店", lat:34.6826, lng:135.4989, visits:0, pt:0 },
   { id:"m19", name:"長堀橋店", lat:34.6746, lng:135.5062, visits:0, pt:0 },
-  { id:"m20", name: "心斎橋北店", lat:34.6765, lng:135.5011, visits:0, pt:0 }
+  { id:"m20", name:"心斎橋北店", lat:34.6765, lng:135.5011, visits:0, pt:0 }
 ];
 
 var stores = defStores;
-try { var sv = JSON.parse(localStorage.getItem('mac_v11')); if (sv && sv.length) stores = sv; } catch(e){}
+try { var sv = JSON.parse(localStorage.getItem('mac_v12')); if (sv && sv.length) stores = sv; } catch(e){}
 var sel = null, markers = {}, circles = {}, userM = null, cool = false, cTimer = null;
 
 function getStat(v) {
@@ -174,10 +198,16 @@ function render() {
   stores.forEach(function(s) {
     if (markers[s.id]) return;
     var c = s.visits > 0;
+    
+    // 【店名常時表示用アイコン】
+    var labelHtml = '<div class="store-label ' + (c ? 'conquered' : '') + '">' + s.name + '</div>';
+    var labelIcon = L.divIcon({ html: labelHtml, className: '', iconSize: [100, 24], iconAnchor: [50, -4] });
+    L.marker([s.lat, s.lng], { icon: labelIcon, interactive: false }).addTo(map);
+
     var m = L.circleMarker([s.lat, s.lng], { radius: c?11:9, color: c?'#ffd700':'#00ffcc', fillColor: c?'#ff0000':'#222', fillOpacity:0.95, weight:3 }).addTo(map);
     m.on('click', function() { playSound('select'); selectStore(s); });
     markers[s.id] = m;
-    // 【修正】interactive: false を追加して円の向こう側のピンが押せるようにする
+    
     if (c) circles[s.id] = L.circle([s.lat, s.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:getStat(s.visits).r, interactive: false }).addTo(map);
   });
   updHead();
@@ -204,17 +234,21 @@ function invade(pt, menu) {
   var first = (sel.visits === 0), oldLv = getStat(sel.visits).lv;
   sel.visits++; sel.pt += pt;
   var ns = getStat(sel.visits);
-  localStorage.setItem('mac_v11', JSON.stringify(stores));
+  localStorage.setItem('mac_v12', JSON.stringify(stores));
+  
   markers[sel.id].setStyle({ color:'#ffd700', fillColor:'#ff0000', radius:11 });
   if (circles[sel.id]) circles[sel.id].setRadius(ns.r);
   else circles[sel.id] = L.circle([sel.lat, sel.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:ns.r, interactive: false }).addTo(map);
+  
   var ci = document.getElementById('cutin');
   if (cTimer) clearTimeout(cTimer);
   playSound((first || ns.lv > oldLv) ? 'levelup' : 'attack');
   ci.innerText = first ? (sel.name + "、完全制圧！") : (ns.lv > oldLv ? ("城郭進化！【" + ns.t + "】") : (menu + "で内政強化！"));
   ci.style.display = 'block';
   selectStore(sel); updHead();
-  cTimer = setTimeout(function() { ci.style.display = 'none'; cool = false; btns.forEach(function(b){ b.disabled = false; }); }, 1500);
+  
+  // 【超高速化】演出ウェイトを800msに短縮し、サクサク動かす
+  cTimer = setTimeout(function() { ci.style.display = 'none'; cool = false; btns.forEach(function(b){ b.disabled = false; }); }, 800);
 }
 
 function updHead() {
@@ -238,9 +272,12 @@ function scanAreaStores() {
       var lat = el.lat || (el.center && el.center.lat), lng = el.lon || (el.center && el.center.lon);
       if (!lat || !lng) return;
       var ex = stores.some(function(s){ return Math.abs(s.lat - lat) < 0.0012 && Math.abs(s.lng - lng) < 0.0012; });
-      if (!ex) { stores.push({ id:"o_"+el.id, name: t.branch || t.name || "発見拠点", lat:lat, lng:lng, visits:0, pt:0 }); add++; }
+      if (!ex) { 
+        var cleanName = (t.branch || t.name || "発見拠点").replace(/マクドナルド|マクド|McDonald's/g, '').trim() || "マクドナルド";
+        stores.push({ id:"o_"+el.id, name: cleanName, lat:lat, lng:lng, visits:0, pt:0 }); add++; 
+      }
     });
-    localStorage.setItem('mac_v11', JSON.stringify(stores)); render();
+    localStorage.setItem('mac_v12', JSON.stringify(stores)); render();
     btn.innerText = "🔍 完了(+" + add + "城)"; sb.innerText = "🟢 新たに " + add + " 城を発見！";
     setTimeout(function(){ btn.innerText = "🔍 周辺を偵察"; }, 2500);
   }).catch(function(){ sb.innerText = "⚠️ 少し地図を拡大して再試行してください"; btn.innerText = "🔍 周辺を偵察"; });
@@ -251,7 +288,6 @@ function openMenu() {
   var tv = 0, cc = 0, tp = 0;
   stores.forEach(function(s){ tv += s.visits; if (s.visits > 0) cc++; tp += s.pt; });
   
-  // ポイントに応じた「天下秘宝」の解放判定
   var treasures = [
     { pt: 300, name: "🍔 黄金のビッグマック像", desc: "兵力300で解放。輝く純金のパティが士気を高める。" },
     { pt: 1000, name: "👑 覇王のポテトホルダー", desc: "兵力1000で解放。揚げたての熱を永遠に保つ魔導具。" },
@@ -260,10 +296,8 @@ function openMenu() {
   ];
   
   var treasureHtml = "<h4 style='color:#ffd700;margin-top:10px;margin-bottom:6px;'>🎁 解放された天下秘宝</h4>";
-  var unlockedCount = 0;
   treasures.forEach(function(tr) {
     if (tp >= tr.pt) {
-      unlockedCount++;
       treasureHtml += "<div class='treasure-item'><b>" + tr.name + "</b><br><span style='color:#aaa;font-size:11px;'>" + tr.desc + "</span></div>";
     } else {
       treasureHtml += "<div class='treasure-item' style='opacity:0.4;'>🔒 ??? (必要兵力: " + tr.pt + " pt)</div>";
@@ -297,7 +331,7 @@ function locateUser() {
 }
 
 render();
-sb.innerText = "🟢 11号機稼働中：円の向こうのピンもタップ可能！";
+sb.innerText = "🟢 12号機稼働中：店名表示＆超高速レスポンス！";
 </script>
 </body>
 </html>
