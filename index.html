@@ -100,6 +100,8 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .ration em { font-style: normal; font-family: var(--font-display); font-weight: 800; color: var(--gold-hi); font-size: 14px; }
 .ration.hot { box-shadow: 0 0 0 2px var(--gold-hi); }
 .ration:disabled { filter: grayscale(.8) brightness(.6); }
+.gate { font-size: 12px; padding: 8px 10px; border-radius: 6px; border: 1px dashed var(--line); color: var(--muted); }
+.gate.ok { border-style: solid; border-color: var(--jade); color: var(--jade); }
 .undo { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 8px 10px; border: 1px dashed var(--line); border-radius: 6px; }
 .linkbtn { background: none; border: none; color: var(--gold-hi); text-decoration: underline; font-size: 12px; padding: 4px; }
 .sect-label { font-size: 10px; letter-spacing: .2em; color: var(--muted); }
@@ -597,36 +599,146 @@ function onTap(px, py, ll) {
 }
 
 /* ---------- audio ---------- */
-const AC = window.AudioContext || window.webkitAudioContext; let ac = null, bgmTimer = null;
-function actx() { if (!ac && AC) ac = new AC(); if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+const AC = window.AudioContext || window.webkitAudioContext;
+let ac = null, master = null, bgmBus = null, noiseBuf = null, distCurve = null;
+function actx() {
+  if (!ac && AC) {
+    ac = new AC();
+    const comp = ac.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.knee.value = 8; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.2;
+    master = ac.createGain(); master.gain.value = 1.0;
+    master.connect(comp); comp.connect(ac.destination);
+    bgmBus = ac.createGain(); bgmBus.gain.value = 0.8; bgmBus.connect(master);
+    noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    distCurve = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) { const x = i / 512 - 1; distCurve[i] = Math.tanh(x * 3.2); }
+  }
+  if (ac && ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function env(g, t, v, a, dec) { g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + a); g.gain.exponentialRampToValueAtTime(0.0008, t + a + dec); }
 function tone(type, f0, f1, gain, dur, at) {
   const c = actx(); if (!c) return; const t = c.currentTime + (at || 0);
   const o = c.createOscillator(), g = c.createGain(); o.type = type;
   o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
   g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
-  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.02);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.02);
+}
+function noise(t, dur, type, freq, q, v, out) {
+  const n = ac.createBufferSource(); n.buffer = noiseBuf;
+  const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+  const g = ac.createGain(); env(g, t, v, 0.002, dur);
+  n.connect(f); f.connect(g); g.connect(out); n.start(t); n.stop(t + dur + 0.05);
+}
+
+/* instruments */
+function odaiko(t, v) {
+  const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine';
+  o.frequency.setValueAtTime(125, t); o.frequency.exponentialRampToValueAtTime(44, t + 0.38);
+  env(g, t, v, 0.003, 0.55); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.62);
+  noise(t, 0.09, 'lowpass', 1100, 0.7, v * 0.55, bgmBus);
+}
+function shime(t, v) { noise(t, 0.045, 'bandpass', 3400, 1.6, v, bgmBus); }
+function kane(t, v) {
+  [1, 2.76, 5.4].forEach((m, i) => {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = 880 * m;
+    env(g, t, v / (i + 1), 0.002, 0.18); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.25);
+  });
+}
+function shamisen(t, f, v) {
+  const o = ac.createOscillator(), o2 = ac.createOscillator(), fl = ac.createBiquadFilter(), g = ac.createGain();
+  o.type = 'sawtooth'; o2.type = 'square';
+  o.frequency.setValueAtTime(f * 1.03, t); o.frequency.exponentialRampToValueAtTime(f, t + 0.035);
+  o2.frequency.setValueAtTime(f * 2.06, t); o2.frequency.exponentialRampToValueAtTime(f * 2, t + 0.035);
+  const g2 = ac.createGain(); g2.gain.value = 0.25;
+  fl.type = 'lowpass'; fl.Q.value = 7; fl.frequency.setValueAtTime(4200, t); fl.frequency.exponentialRampToValueAtTime(700, t + 0.2);
+  env(g, t, v, 0.003, 0.32);
+  o.connect(fl); o2.connect(g2); g2.connect(fl); fl.connect(g); g.connect(bgmBus);
+  o.start(t); o2.start(t); o.stop(t + 0.4); o2.stop(t + 0.4);
+}
+function bassNote(t, f, v) {
+  const o = ac.createOscillator(), fl = ac.createBiquadFilter(), g = ac.createGain(); o.type = 'sawtooth'; o.frequency.value = f;
+  fl.type = 'lowpass'; fl.frequency.value = 420; fl.Q.value = 3; env(g, t, v, 0.004, 0.2);
+  o.connect(fl); fl.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 0.26);
+}
+function stab(t, f, v, len) {
+  const ws = ac.createWaveShaper(); ws.curve = distCurve; ws.oversample = '2x';
+  const fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 2400;
+  const g = ac.createGain(); env(g, t, v, 0.005, len || 0.45);
+  [1, 1.4983, 2].forEach((m, i) => {
+    const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * m; o.detune.value = i === 1 ? 6 : -4;
+    o.connect(ws); o.start(t); o.stop(t + (len || 0.45) + 0.05);
+  });
+  ws.connect(fl); fl.connect(g); g.connect(bgmBus);
+}
+function horagai(t, v) {
+  const o = ac.createOscillator(), lfo = ac.createOscillator(), lg = ac.createGain(), fl = ac.createBiquadFilter(), g = ac.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(196, t); o.frequency.exponentialRampToValueAtTime(220, t + 0.25);
+  o.frequency.setValueAtTime(220, t + 1.1); o.frequency.exponentialRampToValueAtTime(207, t + 1.5);
+  lfo.frequency.value = 5.5; lg.gain.value = 3; lfo.connect(lg); lg.connect(o.frequency);
+  fl.type = 'lowpass'; fl.frequency.value = 900; fl.Q.value = 2;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.18); g.gain.setValueAtTime(v, t + 1.15); g.gain.exponentialRampToValueAtTime(0.0008, t + 1.6);
+  o.connect(fl); fl.connect(g); g.connect(bgmBus); o.start(t); lfo.start(t); o.stop(t + 1.65); lfo.stop(t + 1.65);
+}
+
+/* score: D 都節 (D Eb G A Bb), 136 BPM, 8 bars x 16 steps */
+const NOTE = { D2: 73.42, A1: 55, G1: 49, Bb1: 58.27, C2: 65.41, D3: 146.83, Eb3: 155.56, G3: 196, A3: 220, Bb3: 233.08, D4: 293.66, Eb4: 311.13, G4: 392, A4: 440, Bb4: 466.16, D5: 587.33, Eb5: 622.25 };
+const LEAD = [
+  'D4 - - D4 - Eb4 - D4 - A3 - - Bb3 - A3 -',
+  'G3 - - A3 - - D4 - - - Eb4 - D4 - - -',
+  'D4 - - D4 - Eb4 - D4 - A3 - - Bb3 - A3 -',
+  'G3 - A3 - Bb3 - A3 - G3 - - - D3 - - -',
+  'D5 - - Bb4 - A4 - - G4 - A4 - Bb4 - A4 -',
+  'G4 - - D4 - - Eb4 - D4 - - - - - - -',
+  'D5 - - Bb4 - A4 - - G4 - A4 - D5 - Eb5 -',
+  'D5 - - - - - - - D4 D4 - D4 D4 - D4 -'
+].map(b => b.split(' '));
+const BASS = ['D2', 'D2', 'D2', 'A1', 'Bb1', 'G1', 'Bb1', 'D2'];
+const BPM = 136, STEP = 60 / BPM / 4;
+let bgmSched = null, nextT = 0, stepI = 0, loopN = 0;
+function playStep(i, t) {
+  const bar = i >> 4, s = i & 15, fill = bar === 3 || bar === 7, big = bar >= 4;
+  // odaiko
+  if (fill ? [0, 4, 8, 10, 12, 13, 14, 15].includes(s) : [0, 6, 8].includes(s)) odaiko(t, s === 0 ? 1 : fill && s > 11 ? 0.75 : 0.85);
+  // shime-daiko on eighths, accents on beats
+  if (s % 2 === 0) shime(t, s % 4 === 0 ? 0.32 : 0.16);
+  if (big && s % 4 === 2) shime(t + STEP * 0.5, 0.1);
+  // kane (hand gong) on off-beats in the high section
+  if (big && (s === 4 || s === 12)) kane(t, 0.07);
+  // bass on eighths with octave pops
+  if (s % 2 === 0) { const f = NOTE[BASS[bar]]; bassNote(t, s % 8 === 4 ? f * 2 : f, 0.55); }
+  // lead
+  const n = LEAD[bar][s]; if (n && n !== '-') shamisen(t, NOTE[n], big ? 0.34 : 0.3);
+  // power stabs in the high section
+  if ((bar === 4 || bar === 6) && (s === 0 || s === 6)) stab(t, NOTE[BASS[bar]] * 4, 0.22, s === 0 ? 0.5 : 0.25);
+  if (bar === 7 && s === 0) stab(t, NOTE.D2 * 4, 0.24, 0.9);
+  // conch horn opens every other loop
+  if (i === 0 && loopN % 2 === 0) horagai(t, 0.2);
+}
+function bgmTick() {
+  while (nextT < ac.currentTime + 0.15) {
+    playStep(stepI, nextT);
+    nextT += STEP; stepI = (stepI + 1) % 128; if (stepI === 0) loopN++;
+  }
 }
 function sfx(kind) {
   try {
-    if (kind === 'select') tone('sine', 620, 0, 0.08, 0.06);
-    else if (kind === 'attack') { tone('triangle', 150, 42, 0.45, 0.28); tone('square', 90, 40, 0.08, 0.12); }
-    else if (kind === 'levelup') [523.2, 659.2, 784, 1046.5, 1318.5].forEach((f, i) => tone('sawtooth', f, 0, 0.11, 0.35, i * 0.07));
-    else if (kind === 'treasure') [784, 988, 1175, 1568].forEach((f, i) => tone('triangle', f, 0, 0.12, 0.5, i * 0.09));
+    if (!actx()) return;
+    if (kind === 'select') tone('sine', 660, 0, 0.12, 0.06);
+    else if (kind === 'attack') { const t = ac.currentTime; odaiko(t, 1); shime(t + 0.09, 0.35); tone('square', 90, 40, 0.1, 0.14); }
+    else if (kind === 'levelup') { const t = ac.currentTime; odaiko(t, 1); [293.66, 392, 440, 587.33, 880].forEach((f, i) => tone('sawtooth', f, 0, 0.16, 0.4, 0.06 + i * 0.07)); }
+    else if (kind === 'treasure') { kane(ac.currentTime, 0.2); [587.33, 698.46, 880, 1174.66].forEach((f, i) => tone('triangle', f, 0, 0.18, 0.55, 0.05 + i * 0.09)); }
     if (navigator.vibrate) navigator.vibrate(kind === 'levelup' || kind === 'treasure' ? [50, 30, 110] : kind === 'attack' ? 40 : 12);
   } catch (e) {}
 }
 $('#b-bgm').addEventListener('click', () => {
   const b = $('#b-bgm');
-  if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; b.classList.remove('on'); return; }
+  if (bgmSched) { clearInterval(bgmSched); bgmSched = null; b.classList.remove('on'); return; }
   if (!actx()) return;
   b.classList.add('on');
-  const notes = [110, 110, 164.8, 110, 130.8, 146.8, 110, 98]; let i = 0;
-  bgmTimer = setInterval(() => {
-    const n = notes[i % notes.length];
-    tone('sawtooth', n, 0, 0.05, 0.24);
-    if (i % 4 === 0) tone('triangle', 70, 38, 0.25, 0.22);
-    i++;
-  }, 300);
+  nextT = ac.currentTime + 0.08; stepI = 0;
+  bgmSched = setInterval(bgmTick, 25); bgmTick();
 });
 
 /* ---------- ticker & header ---------- */
@@ -639,7 +751,7 @@ function say(msg, tone) {
 function idleTicker() {
   if (S.fallen) return say(S.fallen + '城で治安が悪化しています。城一覧から確認できます', '');
   if (S.soon) return say(S.soon + '城の治安維持期限が14日以内に迫っています', '');
-  if (!S.tv) return say('城をタップし、注文した兵糧を選ぶと制圧できます', '');
+  if (!S.tv) return say('店舗の30m以内で城をタップし、注文した兵糧を選ぶと制圧できます', '');
   const today = state.log.filter(e => new Date(e.t).toDateString() === new Date().toDateString()).length;
   say(today ? '本日の出陣 ' + today + '回。総侵攻 ' + S.tv + '回' : '本日はまだ出陣していません。総侵攻 ' + S.tv + '回', '');
 }
@@ -662,7 +774,7 @@ function renderSheet() {
   const s = byId(selected); if (!s) { sheet.hidden = true; return; }
   const d = D[s.id], L = d.L, next = LEVELS[L.lv + 1];
   let guard = '';
-  if (!d.v) guard = '<div class="guard">未制圧の城。注文した兵糧を選ぶと制圧します</div>';
+  if (!d.v) guard = '<div class="guard">未制圧の城。店舗で兵糧を選ぶと制圧します</div>';
   else if (L.lv >= 5) guard = '<div class="guard eternal">永久不落。防衛期限はありません</div>';
   else if (d.fallen) guard = '<div class="guard fallen">治安悪化中。最終来訪から' + d.days + '日経過。再訪で回復します</div>';
   else { const left = GUARD - d.days; guard = '<div class="guard ' + (left <= 14 ? 'soon' : 'ok') + '">治安維持 あと<b>' + left + '日</b>（最終来訪 ' + fmtD(d.last) + '）</div>'; }
@@ -670,6 +782,7 @@ function renderSheet() {
   const hr = new Date().getHours() + new Date().getMinutes() / 60;
   const morning = hr >= 5 && hr < 10.5;
   const hist = state.log.filter(e => e.s === s.id).slice(-4).reverse();
+  const gt = gate(s);
   const today = state.log.some(e => e.s === s.id && new Date(e.t).toDateString() === new Date().toDateString());
   sheet.innerHTML =
     '<div class="sheet-head">' +
@@ -681,9 +794,10 @@ function renderSheet() {
     (next ? '<div class="meter"><div class="meter-row"><span>次は <b>Lv.' + next.lv + ' ' + next.t + '</b>（半径' + next.r.toLocaleString() + 'm）</span><span>あと' + (next.need - d.v) + '回</span></div><div class="bar"><i style="width:' + prog + '%"></i></div></div>' : '') +
     guard +
     '<div class="sect-label">兵糧を選んで出陣' + (today ? ' ・ 本日は出陣済み' : '') + '</div>' +
+    '<div class="gate' + (gt.ok ? ' ok' : '') + '" id="sh-gate">' + esc(gt.msg) + '</div>' +
     '<div class="rations">' + Object.keys(MENUS).map(k => {
       const m = MENUS[k];
-      return '<button class="ration' + (k === 'asa' && morning ? ' hot' : '') + '" data-k="' + k + '"' + (cool ? ' disabled' : '') + '><span class="k">' + m.k + '</span><span>' + m.name + '<br><em>+' + m.pt + '</em></span></button>';
+      return '<button class="ration' + (k === 'asa' && morning ? ' hot' : '') + '" data-k="' + k + '"' + (cool || !gt.ok ? ' disabled' : '') + '><span class="k">' + m.k + '</span><span>' + m.name + '<br><em>+' + m.pt + '</em></span></button>';
     }).join('') + '</div>' +
     (Date.now() < undoUntil ? '<div class="undo"><span>直前の出陣を記録しました</span><button class="linkbtn" id="sh-undo">取り消す</button></div>' : '') +
     '<div class="sect-label">軍議メモ</div>' +
@@ -713,7 +827,7 @@ function renderSheet() {
 
 function snapshotUnlocked() { return TREASURES.map(t => t.ok(S)); }
 function invade(k) {
-  const s = byId(selected); if (!s || cool) return;
+  const s = byId(selected); if (!s || cool || !gate(s).ok) return;
   cool = true;
   const m = MENUS[k], before = D[s.id].v, oldLv = D[s.id].L.lv, wasFallen = D[s.id].fallen;
   const oldRank = rankOf(S.pt)[1], oldT = snapshotUnlocked();
@@ -731,7 +845,7 @@ function invade(k) {
   playCuts(q);
   undoUntil = Date.now() + 15000; clearTimeout(undoTimer); undoTimer = setTimeout(() => { if (selected) renderSheet(); }, 15100);
   renderSheet(); refreshHeader(); draw();
-  setTimeout(() => { cool = false; if (selected) renderSheet(); }, 1200);
+  setTimeout(() => { cool = false; updateGate(); }, 1200);
 }
 function undo() {
   const e = state.log[state.log.length - 1];
@@ -772,34 +886,66 @@ function openBuild(lat, lng) {
   };
 }
 
-/* ---------- GPS & auto lock-on ---------- */
-let watchId = null, lastLock = null;
+/* ---------- GPS, auto lock-on & check-in range ---------- */
+const CHECKIN_M = 30, LOCK_M = 80, STALE_MS = 120000;
+let watchId = null, lastLock = null, geoState = 'off', panOnFix = false;
+const fmtDist = d => d >= 1000 ? (d / 1000).toFixed(1) + 'km' : Math.round(d) + 'm';
+function distTo(s) { if (!me) return Infinity; const [a, b] = toXY(me.lat, me.lng), [x, y] = toXY(s.lat, s.lng); return Math.hypot(x - a, y - b); }
+function gate(s) {
+  if (geoState === 'denied') return { ok: false, msg: window.claude ? 'この画面では位置情報が使えません。ホーム画面版（GitHub Pages）で出陣してください' : '位置情報が許可されていません。端末の設定でこのサイトの位置情報をオンにしてください' };
+  if (geoState === 'none') return { ok: false, msg: 'この画面では位置情報が使えないため出陣できません' };
+  if (!me || Date.now() - me.t > STALE_MS) return { ok: false, msg: '現在地を測位中…' };
+  const d = distTo(s), tol = Math.min(me.acc || 0, 20);
+  if (d - tol <= CHECKIN_M) return { ok: true, msg: '射程内（' + fmtDist(d) + '）。兵糧を選んで出陣せよ' };
+  return { ok: false, msg: '城まで' + fmtDist(d) + '。' + CHECKIN_M + 'm以内に近づくと出陣できます' + (me.acc > 40 ? '（測位精度 ±' + Math.round(me.acc) + 'm）' : '') };
+}
+function updateGate() {
+  const s = byId(selected), el = $('#sh-gate'); if (!s || !el) return;
+  const g = gate(s);
+  el.textContent = g.msg; el.className = 'gate' + (g.ok ? ' ok' : '');
+  sheet.querySelectorAll('.ration').forEach(b => { b.disabled = cool || !g.ok; });
+}
+function startGeo() {
+  if (!navigator.geolocation) { geoState = 'none'; updateGate(); return; }
+  if (watchId != null) return;
+  geoState = 'waiting';
+  watchId = navigator.geolocation.watchPosition(p => {
+    geoState = 'ok';
+    me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, t: Date.now() };
+    if (panOnFix) {
+      panOnFix = false;
+      if (G) { G.map.panTo({ lat: me.lat, lng: me.lng }); if (G.map.getZoom() < 16) G.map.setZoom(16); }
+      else { const [x, y] = toXY(me.lat, me.lng); flyTo(x, y, Math.max(view.s, 0.25), true); }
+      const n = nearest(); if (n && n.dist > LOCK_M) say('最寄りの城：' + n.s.name + '（' + fmtDist(n.dist) + '）', 'good');
+    }
+    const near = nearest();
+    if (near && near.dist <= LOCK_M && lastLock !== near.s.id && !buildMode && !moveId) {
+      lastLock = near.s.id; sfx('levelup'); select(near.s.id);
+      say('ロックオン：' + near.s.name + '（' + fmtDist(near.dist) + '）', 'good');
+    }
+    if (near && near.dist > LOCK_M * 2) lastLock = null;
+    updateGate(); draw();
+  }, err => {
+    if (err && err.code === 1) { geoState = 'denied'; navigator.geolocation.clearWatch(watchId); watchId = null; }
+    else if (geoState !== 'ok') geoState = 'waiting';
+    if (panOnFix) { panOnFix = false; say(err && err.code === 1 ? '位置情報が許可されていません。端末の設定でオンにしてください' : '現在地を取得できませんでした', 'warn'); }
+    updateGate();
+  }, { enableHighAccuracy: true, maximumAge: 10000, timeout: 20000 });
+}
 $('#b-loc').addEventListener('click', () => {
   sfx('select');
-  if (!navigator.geolocation) return say('この端末では位置情報が使えません', 'warn');
-  say('現在地を特定中…', 'good');
-  const onPos = p => {
-    me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
-    const near = nearest();
-    if (near && near.dist <= 80 && lastLock !== near.s.id) {
-      lastLock = near.s.id; sfx('levelup'); select(near.s.id);
-      say('ロックオン：' + near.s.name + '（' + Math.round(near.dist) + 'm）', 'good');
-    } else if (!selected) draw();
-  };
-  const onErr = err => {
-    say(err && err.code === 1 ? '位置情報が許可されていません。ホーム画面版（GitHub Pages）で使えます' : '現在地を取得できませんでした', 'warn');
-  };
-  navigator.geolocation.getCurrentPosition(p => {
-    onPos(p);
+  if (geoState === 'denied') { watchId = null; geoState = 'off'; }
+  if (me && Date.now() - me.t < STALE_MS) { startGeo();
     if (G) { G.map.panTo({ lat: me.lat, lng: me.lng }); if (G.map.getZoom() < 16) G.map.setZoom(16); }
     else { const [x, y] = toXY(me.lat, me.lng); flyTo(x, y, Math.max(view.s, 0.25), true); }
-    const n = nearest(); if (n && n.dist > 80) say('最寄りの城：' + n.s.name + '（' + (n.dist >= 1000 ? (n.dist / 1000).toFixed(1) + 'km' : Math.round(n.dist) + 'm') + '）', 'good');
-    if (watchId == null) watchId = navigator.geolocation.watchPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
-  }, onErr, { enableHighAccuracy: true, timeout: 12000 });
+    return;
+  }
+  say('現在地を特定中…', 'good'); panOnFix = true; startGeo();
 });
+setInterval(updateGate, 15000);
 function nearest() {
-  if (!me) return null; const [mx, my] = toXY(me.lat, me.lng); let best = null;
-  state.stores.forEach(s => { const [x, y] = toXY(s.lat, s.lng), d = Math.hypot(x - mx, y - my); if (!best || d < best.dist) best = { s, dist: d }; });
+  if (!me) return null; let best = null;
+  state.stores.forEach(s => { const d = distTo(s); if (!best || d < best.dist) best = { s, dist: d }; });
   return best;
 }
 
@@ -1000,6 +1146,7 @@ resize(); fitAll(false); refreshHeader();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
 setTimeout(connectCloud, 0);
 loadGoogle();
+startGeo();
 })();
 </script>
 
