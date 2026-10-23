@@ -1,337 +1,1007 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>McDonald's EMPIRES - 12号機</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body, html { width: 100%; height: 100%; overflow: hidden; background: #0a0e17; font-family: sans-serif; user-select: none; }
-#map { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; background: #1a1f2c; }
-.dark-map-tiles { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%) grayscale(20%); }
-
-.header { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.9); color: #d4af37; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #d4af37; }
-.title-rank { font-size: 15px; font-weight: bold; }
-.stats { font-size: 12px; color: #fff; text-align: right; }
-.stats span { color: #ffcc00; font-weight: bold; font-size: 14px; }
-#status-bar { position: fixed; top: 56px; left: 0; right: 0; z-index: 1000; background: rgba(20,40,20,0.95); color: #00ff88; font-size: 11px; text-align: center; padding: 5px; border-bottom: 1px solid #00ff88; }
-.bgm-btn { position: fixed; top: 90px; left: 12px; z-index: 1000; background: rgba(15,15,15,0.95); border: 2px solid #d4af37; color: #ffd700; padding: 9px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-.side-controls { position: fixed; top: 90px; right: 12px; z-index: 1000; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
-.ctrl-btn { background: rgba(15,15,15,0.95); border: 2px solid #d4af37; color: #ffd700; padding: 9px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-
-/* 【店名常時表示ラベル】ピンの真下に表示されるネームプレート */
-.store-label {
-    background: rgba(10, 14, 23, 0.85);
-    border: 1px solid #d4af37;
-    color: #ffd700;
-    font-size: 10px;
-    font-weight: bold;
-    padding: 2px 6px;
-    border-radius: 4px;
-    white-space: nowrap;
-    text-align: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.8);
-    transform: translate(-50%, 4px);
-}
-.store-label.conquered {
-    background: rgba(139, 0, 0, 0.9);
-    border-color: #ffd700;
-    color: #fff;
-}
-
-/* 下部パネル ＆ 閉じるボタン */
-.bottom-panel { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; width: 92%; max-width: 400px; background: rgba(12,12,12,0.95); border: 2px solid #d4af37; border-radius: 12px; padding: 15px; color: #fff; display: none; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.9); }
-.close-panel { position: absolute; top: 8px; right: 12px; background: #333; color: #ffd700; border: 1px solid #d4af37; border-radius: 50%; width: 26px; height: 26px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-
-.castle-name { font-size: 18px; color: #ffcc00; margin-bottom: 5px; font-weight: bold; }
-.castle-info { font-size: 12px; color: #ccc; margin-bottom: 12px; }
-.food-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-/* 【超高速化】押した瞬間に即座に反応するボタン */
-.btn-attack { background: linear-gradient(135deg, #8b0000 0%, #4a0000 100%); color: #ffd700; border: 1px solid #d4af37; padding: 12px 6px; font-size: 13px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: transform 0.05s; }
-.btn-attack:active { transform: scale(0.94); }
-.btn-attack:disabled { background: #222; color: #666; border-color: #444; }
-
-/* モーダル共通 */
-#modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 3000; display: none; justify-content: center; align-items: center; }
-.modal-box { width: 88%; max-width: 380px; max-height: 85vh; overflow-y: auto; background: #141414; border: 2px solid #d4af37; border-radius: 12px; padding: 20px; color: #fff; text-align: center; }
-.modal-title { font-size: 18px; color: #ffd700; margin-bottom: 12px; border-bottom: 1px solid #444; padding-bottom: 8px; }
-.modal-body { font-size: 13px; color: #ddd; margin-bottom: 18px; line-height: 1.6; text-align: left; }
-.btn-modal-close { background: #333; color: #fff; border: 1px solid #888; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-.btn-modal-reset { background: #800; color: #ffcccc; border: 1px solid #f00; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-.treasure-item { background: rgba(212,175,55,0.1); border: 1px solid #d4af37; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 12px; }
-
-#cutin { position: fixed; top: 40%; left: 0; right: 0; z-index: 2000; background: rgba(139,0,0,0.95); color: #ffd700; text-align: center; padding: 16px 0; font-size: 20px; font-weight: bold; border-top: 2px solid #ffd700; border-bottom: 2px solid #ffd700; display: none; pointer-events: none; }
-</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1b1712">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EMPIRES">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
 </head>
 <body>
-<div class="header">
-  <div class="title-rank" id="rank-display">【称号】浪人（見習い）</div>
-  <div class="stats">制圧: <span id="conquered-count">0</span>城<br>総兵力: <span id="total-pt">0</span></div>
-</div>
-<div id="status-bar">⏳ 起動中...</div>
-<button class="bgm-btn" id="bgm-toggle-btn" onclick="toggleBGM()">🎵 BGM: 停止中</button>
-<div class="side-controls">
-  <button class="ctrl-btn" onclick="locateUser()">🎯 現在地へ</button>
-  <button class="ctrl-btn" id="scan-btn" onclick="scanAreaStores()">🔍 周辺を偵察</button>
-  <button class="ctrl-btn" onclick="openMenu()">📜 軍略メニュー</button>
-</div>
-<div id="map"></div>
-<div id="cutin">完全制圧！</div>
+<title>McDonald's EMPIRES</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: one-screen war table. A lacquer header, a full-bleed ink map with gold territory, a lacquer command sheet that rises from the bottom. */
+:root {
+  --ink: #0d0c0a;
+  --ink-2: #16130f;
+  --lacquer: #1b1712;
+  --line: #3a3124;
+  --gold: #d4af37;
+  --gold-hi: #f0d68a;
+  --crimson: #a31e1e;
+  --crimson-hi: #c7342b;
+  --jade: #5cc4a0;
+  --paper: #efe6d0;
+  --muted: #a69c86;
+  --warn: #e98a3a;
+  --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+h2, h3, p { margin: 0; }
+body { background: var(--ink); color: var(--paper); font-family: var(--font-body); overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+.app { height: 100%; display: flex; flex-direction: column; }
 
-<div id="modal-overlay" onclick="closeMenuDirect()">
-  <div class="modal-box" onclick="event.stopPropagation()">
-    <div class="modal-title">📜 天下統一・軍略記録</div>
-    <div class="modal-body" id="modal-stats-text"></div>
-    <div style="display:flex;justify-content:space-between;">
-      <button class="btn-modal-close" onclick="closeMenuDirect()">閉じる</button>
-      <button class="btn-modal-reset" onclick="confirmReset()">⚠️ 天下布武やり直し</button>
+/* header */
+.hdr { background: var(--lacquer); border-bottom: 1px solid var(--gold); padding-block: 10px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); display: flex; align-items: center; justify-content: space-between; gap: 12px; position: relative; z-index: 5; }
+.hdr-rank { min-width: 0; }
+.hdr-eyebrow { font-size: 10px; letter-spacing: .2em; color: var(--muted); }
+.hdr-title { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--gold-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hdr-stats { display: flex; gap: 14px; flex-shrink: 0; }
+.stat { text-align: right; }
+.stat b { display: block; font-family: var(--font-display); font-size: 20px; color: var(--paper); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat span { font-size: 10px; color: var(--muted); letter-spacing: .12em; }
+.ticker { background: var(--ink-2); border-bottom: 1px solid var(--line); font-size: 12px; color: var(--muted); padding-block: 6px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; z-index: 5; }
+.ticker.warn { color: var(--warn); }
+.ticker.good { color: var(--gold-hi); }
+
+/* map */
+.mapwrap { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+#map { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+#gmap { position: absolute; inset: 0; background: var(--ink); }
+.g #map { pointer-events: none; }
+.tools { position: absolute; top: 12px; right: max(12px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 8px; z-index: 4; }
+.tools.left { right: auto; left: max(12px, env(safe-area-inset-left, 0px)); }
+.tool { width: 46px; height: 46px; border-radius: 50%; background: rgba(27,23,18,.92); border: 1px solid var(--gold); color: var(--gold-hi); font-family: var(--font-display); font-weight: 800; font-size: 15px; display: grid; place-items: center; box-shadow: 0 4px 14px rgba(0,0,0,.5); position: relative; }
+.tool small { position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-family: var(--font-body); font-weight: 500; font-size: 9px; color: var(--muted); white-space: nowrap; letter-spacing: .05em; text-shadow: 0 1px 3px #000; }
+.tool.on { background: var(--crimson); color: #fff; }
+.tools .tool + .tool { margin-top: 10px; }
+
+/* bottom sheet */
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--lacquer); border-top: 1px solid var(--gold); border-radius: 14px 14px 0 0; box-shadow: 0 -12px 40px rgba(0,0,0,.6); padding-top: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px)); padding-left: var(--gutter-l); padding-right: var(--gutter-r); max-height: 72%; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.sheet-head { display: flex; align-items: flex-start; gap: 12px; }
+.seal { flex-shrink: 0; width: 46px; height: 46px; border-radius: 6px; background: var(--crimson); color: var(--gold-hi); border: 1px solid var(--gold); display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; line-height: 1; text-align: center; }
+.seal b { font-size: 20px; display: block; }
+.seal i { font-style: normal; font-size: 9px; letter-spacing: .1em; }
+.seal.none { background: transparent; border-style: dashed; border-color: var(--jade); color: var(--jade); }
+.sheet-name { font-family: var(--font-display); font-weight: 800; font-size: 21px; line-height: 1.25; color: var(--paper); text-wrap: balance; }
+.sheet-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.sheet-headtext { flex: 1; min-width: 0; }
+.x { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 18px; line-height: 1; }
+.meter { display: flex; flex-direction: column; gap: 5px; }
+.meter-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); gap: 8px; }
+.meter-row b { color: var(--paper); font-weight: 500; }
+.bar { height: 6px; background: var(--ink); border: 1px solid var(--line); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-hi)); }
+.guard { font-size: 12px; padding: 6px 10px; border-radius: 6px; border: 1px solid var(--line); color: var(--muted); }
+.guard.ok b { color: var(--gold-hi); }
+.guard.soon { border-color: var(--warn); color: var(--warn); }
+.guard.fallen { border-color: var(--crimson-hi); color: #ffb3a8; background: rgba(163,30,30,.15); }
+.guard.eternal { border-color: var(--gold); color: var(--gold-hi); }
+.rations { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.ration { display: flex; align-items: center; gap: 10px; text-align: left; padding: 10px; border-radius: 8px; background: linear-gradient(160deg, #6e1515, #3d0b0b); border: 1px solid var(--gold); color: var(--paper); min-height: 58px; }
+.ration .k { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--gold-hi); display: grid; place-items: center; font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--gold-hi); }
+.ration span { display: block; font-size: 12px; line-height: 1.3; min-width: 0; }
+.ration em { font-style: normal; font-family: var(--font-display); font-weight: 800; color: var(--gold-hi); font-size: 14px; }
+.ration.hot { box-shadow: 0 0 0 2px var(--gold-hi); }
+.ration:disabled { filter: grayscale(.8) brightness(.6); }
+.undo { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 8px 10px; border: 1px dashed var(--line); border-radius: 6px; }
+.linkbtn { background: none; border: none; color: var(--gold-hi); text-decoration: underline; font-size: 12px; padding: 4px; }
+.sect-label { font-size: 10px; letter-spacing: .2em; color: var(--muted); }
+textarea, input[type=text] { width: 100%; background: var(--ink); color: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 14px; -webkit-user-select: text; user-select: text; }
+textarea { min-height: 56px; resize: vertical; }
+.history { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.history div { display: flex; justify-content: space-between; gap: 8px; }
+.sheet-foot { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ghost { background: transparent; border: 1px solid var(--line); color: var(--muted); border-radius: 6px; padding: 7px 12px; font-size: 12px; }
+.ghost.danger { border-color: var(--crimson-hi); color: #ffb3a8; }
+.primary { background: var(--gold); color: var(--ink); border: none; border-radius: 6px; padding: 9px 16px; font-weight: 700; font-size: 14px; }
+
+/* cut-in */
+.cutin { position: absolute; left: 0; right: 0; top: 36%; z-index: 9; pointer-events: none; background: linear-gradient(90deg, rgba(110,15,15,0), rgba(140,20,20,.96) 12%, rgba(140,20,20,.96) 88%, rgba(110,15,15,0)); border-top: 2px solid var(--gold-hi); border-bottom: 2px solid var(--gold-hi); text-align: center; padding: 12px var(--gutter-r) 14px var(--gutter-l); }
+.cutin .ey { font-size: 11px; letter-spacing: .4em; color: var(--gold-hi); }
+.cutin .tx { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: #fff; text-shadow: 0 2px 0 #000, 0 0 18px rgba(240,214,138,.6); text-wrap: balance; }
+.cutin.play { animation: band 1.3s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes band { 0% { transform: scaleY(0) skewY(-4deg); opacity: 0; } 12% { transform: scaleY(1.15) skewY(-2deg); opacity: 1; } 22% { transform: scaleY(1) skewY(0); } 85% { opacity: 1; } 100% { opacity: 0; transform: translateX(8%); } }
+@media (prefers-reduced-motion: reduce) { .cutin.play { animation: fade 1.3s both; } @keyframes fade { 0%,100% { opacity: 0; } 10%,85% { opacity: 1; } } }
+
+/* menu */
+.menu { position: absolute; inset: 0; z-index: 8; background: var(--ink); display: flex; flex-direction: column; }
+.menu-head { display: flex; align-items: center; justify-content: space-between; padding-block: 12px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); border-bottom: 1px solid var(--line); }
+.menu-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--gold-hi); }
+.tabs { display: flex; gap: 4px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); padding: 10px 12px; font-size: 14px; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--gold-hi); border-bottom-color: var(--gold); font-weight: 700; }
+.menu-body { flex: 1; overflow-y: auto; padding-block: 16px 32px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); display: flex; flex-direction: column; gap: 18px; }
+.menu-body > * { max-width: 640px; width: 100%; margin-inline: auto; }
+.kv { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.kv div { background: var(--lacquer); padding: 10px 12px; }
+.kv span { display: block; font-size: 11px; color: var(--muted); letter-spacing: .08em; }
+.kv b { font-family: var(--font-display); font-size: 20px; font-variant-numeric: tabular-nums; }
+h3 { font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--gold-hi); margin-bottom: 8px; }
+.ranks { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.ranks div { display: flex; justify-content: space-between; color: var(--muted); padding: 4px 0; border-bottom: 1px dotted var(--line); }
+.ranks div.cur { color: var(--gold-hi); font-weight: 700; }
+.treasures { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+.tr { border: 1px solid var(--gold); border-radius: 8px; padding: 10px; background: rgba(212,175,55,.07); min-width: 0; }
+.tr b { font-family: var(--font-display); font-size: 14px; color: var(--gold-hi); display: block; }
+.tr p { font-size: 11px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.tr .need { font-size: 10px; color: var(--paper); margin-top: 6px; letter-spacing: .05em; }
+.tr.locked { border-color: var(--line); background: transparent; }
+.tr.locked b { color: var(--muted); }
+.months { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 6px; align-items: end; height: 150px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.mcol { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; font-variant-numeric: tabular-nums; }
+.mcol i { width: 70%; background: linear-gradient(0deg, var(--crimson), var(--crimson-hi)); border-top: 2px solid var(--gold-hi); border-radius: 2px 2px 0 0; min-height: 2px; }
+.mcol span { font-size: 11px; color: var(--paper); }
+.mlabels { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 6px; text-align: center; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.mix { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.mix-row { display: grid; grid-template-columns: 7em 1fr 3em; gap: 8px; align-items: center; }
+.mix-row .bar { height: 8px; }
+.mix-row span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.clist { display: flex; flex-direction: column; }
+.crow { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%; }
+.crow .lv { font-family: var(--font-display); font-weight: 800; color: var(--gold-hi); font-size: 13px; text-align: center; border: 1px solid var(--gold); border-radius: 4px; padding: 3px 0; }
+.crow .lv.z { color: var(--jade); border-color: var(--jade); border-style: dashed; }
+.crow .nm { min-width: 0; }
+.crow .nm b { display: block; font-size: 14px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crow .nm small { font-size: 11px; color: var(--muted); }
+.crow .ct { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--muted); }
+.crow .ct.warn { color: var(--warn); }
+.note { font-size: 12px; color: var(--muted); line-height: 1.7; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.empty { font-size: 13px; color: var(--muted); padding: 12px; border: 1px dashed var(--line); border-radius: 8px; text-align: center; }
+</style>
+
+<div class="app">
+  <header class="hdr">
+    <div class="hdr-rank">
+      <div class="hdr-eyebrow">官位</div>
+      <div class="hdr-title" id="rank">浪人（見習い）</div>
     </div>
-  </div>
-</div>
+    <div class="hdr-stats">
+      <div class="stat"><b id="h-cc">0</b><span>制圧城</span></div>
+      <div class="stat"><b id="h-pt">0</b><span>総兵力</span></div>
+    </div>
+  </header>
+  <div class="ticker" id="ticker">陣図を読み込み中…</div>
 
-<div class="bottom-panel" id="panel">
-  <button class="close-panel" onclick="closePanel()">×</button>
-  <div class="castle-name" id="panel-title">拠点名</div>
-  <div class="castle-info" id="panel-info">未制圧の拠点</div>
-  <div class="food-grid">
-    <button class="btn-attack" onclick="invade(150,'朝マック奇襲')">☀️ 朝マック (+150)</button>
-    <button class="btn-attack" onclick="invade(100,'主力セット')">🍔 通常セット (+100)</button>
-    <button class="btn-attack" onclick="invade(200,'期間限定')">⚔️ 期間限定 (+200)</button>
-    <button class="btn-attack" onclick="invade(50,'斥候カフェ')">☕ カフェ (+50)</button>
+  <div class="mapwrap" id="wrap">
+    <div id="gmap" hidden></div>
+    <canvas id="map" aria-label="支配圏の地図"></canvas>
+
+    <div class="tools left">
+      <button class="tool" id="b-bgm" aria-label="合戦BGM">鼓<small>BGM</small></button>
+    </div>
+    <div class="tools">
+      <button class="tool" id="b-loc" aria-label="現在地へ">陣<small>現在地</small></button>
+      <button class="tool" id="b-fit" aria-label="全領土を表示">全<small>全領土</small></button>
+      <button class="tool" id="b-build" aria-label="新しい城を築く">築<small>築城</small></button>
+      <button class="tool" id="b-scan" aria-label="周辺の店舗を偵察">偵<small>偵察</small></button>
+      <button class="tool" id="b-menu" aria-label="軍略メニュー">略<small>軍略</small></button>
+    </div>
+
+    <div class="cutin" id="cutin" hidden><div class="ey" id="cut-ey">制圧</div><div class="tx" id="cut-tx">完全制圧！</div></div>
+
+    <section class="sheet" id="sheet" hidden aria-live="polite"></section>
+
+    <section class="menu" id="menu" hidden>
+      <div class="menu-head"><h2>天下統一・軍略記録</h2><button class="x" id="menu-x" aria-label="閉じる">×</button></div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" data-tab="war" aria-selected="true">戦況</button>
+        <button class="tab" role="tab" data-tab="month" aria-selected="false">月報</button>
+        <button class="tab" role="tab" data-tab="list" aria-selected="false">城一覧</button>
+        <button class="tab" role="tab" data-tab="treasure" aria-selected="false">十大秘宝</button>
+        <button class="tab" role="tab" data-tab="data" aria-selected="false">記録管理</button>
+      </div>
+      <div class="menu-body" id="menu-body"></div>
+    </section>
   </div>
 </div>
 
 <script>
-var sb = document.getElementById('status-bar');
-var AudioCtx = window.AudioContext || window.webkitAudioContext, audioCtx = null, bgmInterval = null, isBgm = false;
+(function () {
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-function playSound(t) {
-  try {
-    if (!audioCtx) audioCtx = new AudioCtx();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    var now = audioCtx.currentTime;
-    if (t === 'select' || t === 'attack') {
-      var o = audioCtx.createOscillator(), g = audioCtx.createGain();
-      o.type = t === 'attack' ? 'triangle' : 'sine';
-      o.frequency.setValueAtTime(t === 'attack' ? 160 : 550, now);
-      if (t === 'attack') o.frequency.exponentialRampToValueAtTime(45, now + 0.2);
-      g.gain.setValueAtTime(t === 'attack' ? 0.3 : 0.1, now);
-      g.gain.linearRampToValueAtTime(0.01, now + (t === 'attack' ? 0.2 : 0.04));
-      o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + (t === 'attack' ? 0.2 : 0.04));
-    } else if (t === 'levelup') {
-      [523.2, 659.2, 784.0, 1046.5].forEach(function(f, i) {
-        var o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        o.type = 'sawtooth'; o.frequency.setValueAtTime(f, now + i * 0.05);
-        g.gain.setValueAtTime(0.15, now + i * 0.05); g.gain.exponentialRampToValueAtTime(0.008, now + i * 0.05 + 0.3);
-        o.connect(g); g.connect(audioCtx.destination); o.start(now + i * 0.05); o.stop(now + i * 0.05 + 0.3);
-      });
-    }
-    if (navigator.vibrate) navigator.vibrate(t === 'levelup' ? [50, 30, 100] : 25);
-  } catch (e) {}
-}
-
-function toggleBGM() {
-  try {
-    if (!audioCtx) audioCtx = new AudioCtx();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    var btn = document.getElementById('bgm-toggle-btn');
-    if (isBgm) { clearInterval(bgmInterval); isBgm = false; btn.innerText = "🎵 BGM: 停止中"; }
-    else {
-      isBgm = true; btn.innerText = "🎵 BGM: 再生中";
-      var notes = [110, 110, 164.8, 110, 130.8, 146.8], s = 0;
-      bgmInterval = setInterval(function() {
-        if (!isBgm) return;
-        var now = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
-        o.type = 'sawtooth'; o.frequency.setValueAtTime(notes[s++ % notes.length], now);
-        g.gain.setValueAtTime(0.07, now); g.gain.linearRampToValueAtTime(0.001, now + 0.22);
-        o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + 0.22);
-      }, 300);
-    }
-  } catch (e) {}
-}
-
-var map = L.map('map', { zoomControl: false }).setView([34.6850, 135.5050], 14);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM', maxZoom: 19, className: 'dark-map-tiles' }).addTo(map);
-
-if (!localStorage.getItem('mac_start')) localStorage.setItem('mac_start', new Date().toLocaleString());
-
-var defStores = [
-  { id:"m1", name:"天満駅前店", lat:34.7048, lng:135.5122, visits:0, pt:0 },
-  { id:"m2", name:"扇町店", lat:34.7035, lng:135.5095, visits:0, pt:0 },
-  { id:"m3", name:"梅田茶屋町店", lat:34.7065, lng:135.4988, visits:0, pt:0 },
-  { id:"m4", name:"南森町駅前店", lat:34.6976, lng:135.5113, visits:0, pt:0 },
-  { id:"m5", name:"中崎町駅前店", lat:34.7068, lng:135.5053, visits:0, pt:0 },
-  { id:"m6", name:"新梅田店", lat:34.7032, lng:135.4965, visits:0, pt:0 },
-  { id:"m7", name:"ルクア大阪店", lat:34.7030, lng:135.4950, visits:0, pt:0 },
-  { id:"m8", name:"曽根崎お初天神店", lat:34.7005, lng:135.5008, visits:0, pt:0 },
-  { id:"m9", name:"淀屋橋ネクストワン店", lat:34.6915, lng:135.5015, visits:0, pt:0 },
-  { id:"m10", name:"南海難波駅店", lat:34.6645, lng:135.5015, visits:0, pt:0 },
-  { id:"m11", name:"日本橋三丁目店", lat:34.6628, lng:135.5056, visits:0, pt:0 },
-  { id:"m12", name:"道頓堀店", lat:34.6687, lng:135.5013, visits:0, pt:0 },
-  { id:"m13", name:"心斎橋筋店", lat:34.6715, lng:135.5012, visits:0, pt:0 },
-  { id:"m14", name:"鶴橋駅前店", lat:34.6653, lng:135.5303, visits:0, pt:0 },
-  { id:"m15", name:"京橋駅前店", lat:34.6968, lng:135.5342, visits:0, pt:0 },
-  { id:"m16", name:"天王寺北口店", lat:34.6475, lng:135.5135, visits:0, pt:0 },
-  { id:"m17", name:"南久宝寺堺筋店", lat:34.6801, lng:135.5061, visits:0, pt:0 },
-  { id:"m18", name:"本町店", lat:34.6826, lng:135.4989, visits:0, pt:0 },
-  { id:"m19", name:"長堀橋店", lat:34.6746, lng:135.5062, visits:0, pt:0 },
-  { id:"m20", name:"心斎橋北店", lat:34.6765, lng:135.5011, visits:0, pt:0 }
+/* ---------- rules ---------- */
+const LEVELS = [
+  { lv: 0, need: 0, t: '未制圧', r: 0 },
+  { lv: 1, need: 1, t: '前線陣地', r: 300 },
+  { lv: 2, need: 3, t: '監視砦', r: 500 },
+  { lv: 3, need: 7, t: '要塞都市', r: 800 },
+  { lv: 4, need: 15, t: '大都督府', r: 1200 },
+  { lv: 5, need: 30, t: '覇王の王都', r: 2000 }
 ];
+const lvOf = v => { let L = LEVELS[0]; for (const l of LEVELS) if (v >= l.need) L = l; return L; };
+const MENUS = {
+  asa: { pt: 150, name: '朝マック奇襲', k: '朝' },
+  set: { pt: 100, name: '通常セット主力部隊', k: '主' },
+  gen: { pt: 200, name: '期間限定新兵器', k: '新' },
+  cafe: { pt: 50, name: '斥候カフェパトロール', k: '茶' }
+};
+const RANKS = [[0, '浪人（見習い）'], [500, '足軽大将'], [1500, '一城の主'], [3000, '大阪管領'], [5000, '天下無双の覇王']];
+const rankOf = p => { let r = RANKS[0]; for (const x of RANKS) if (p >= x[0]) r = x; return r; };
+const GUARD = 90, DAY = 864e5;
+const TREASURES = [
+  { name: '黄金のビッグマック像', desc: '輝く純金のパティが士気を高める。', need: '総兵力 300', ok: S => S.pt >= 300 },
+  { name: '覇王のポテトホルダー', desc: '揚げたての熱を永遠に保つ魔導具。', need: '総兵力 1,000', ok: S => S.pt >= 1000 },
+  { name: '秘伝のマックカフェの壺', desc: '極上の香りで全軍の疲労を癒す。', need: '総兵力 2,500', ok: S => S.pt >= 2500 },
+  { name: '黄金のゴールデンアーチ旗', desc: '天下統一の覇者のみが掲げられる至宝。', need: '総兵力 5,000', ok: S => S.pt >= 5000 },
+  { name: '暁の軍配', desc: '夜明けとともに攻め入る者の采配。', need: '朝マック奇襲 10回', ok: S => S.k.asa >= 10 },
+  { name: '新兵器の設計図', desc: '季節ごとに書き換わる門外不出の図面。', need: '期間限定 10回', ok: S => S.k.gen >= 10 },
+  { name: '斥候の銀の匙', desc: '一杯の珈琲で敵情を探る隠密の道具。', need: 'カフェ 20回', ok: S => S.k.cafe >= 20 },
+  { name: '十城連判状', desc: '十の城主が名を連ねた同盟の証文。', need: '10城を制圧', ok: S => S.cc >= 10 },
+  { name: '百戦錬磨の陣羽織', desc: '百度の出陣を経ても色褪せぬ一着。', need: '総侵攻 100回', ok: S => S.tv >= 100 },
+  { name: '王都の玉璽', desc: '覇王の王都を築いた者だけが押せる印。', need: 'Lv.5の城を1つ', ok: S => S.lv5 >= 1 }
+];
+const DISTRICTS = [
+  ['梅田', 34.7025, 135.4959], ['天満', 34.7046, 135.5120], ['京橋', 34.6966, 135.5340], ['淀屋橋', 34.6920, 135.5010],
+  ['本町', 34.6823, 135.5000], ['大阪城', 34.6873, 135.5262], ['心斎橋', 34.6750, 135.5010], ['難波', 34.6660, 135.5010],
+  ['鶴橋', 34.6655, 135.5300], ['天王寺', 34.6460, 135.5135]
+];
+const DEF_STORES = [
+  ['m1','天満駅前店',34.7048,135.5122],['m2','扇町店',34.7035,135.5095],['m3','梅田茶屋町店',34.7065,135.4988],['m4','南森町駅前店',34.6976,135.5113],
+  ['m5','中崎町駅前店',34.7068,135.5053],['m6','新梅田店',34.7032,135.4965],['m7','ルクア大阪店',34.7030,135.4950],['m8','曽根崎お初天神店',34.7005,135.5008],
+  ['m9','淀屋橋ネクストワン店',34.6915,135.5015],['m10','南海難波駅店',34.6645,135.5015],['m11','日本橋三丁目店',34.6628,135.5056],['m12','道頓堀店',34.6687,135.5013],
+  ['m13','心斎橋筋店',34.6715,135.5012],['m14','鶴橋駅前店',34.6653,135.5303],['m15','京橋駅前店',34.6968,135.5342],['m16','天王寺北口店',34.6475,135.5135],
+  ['m17','南久宝寺堺筋店',34.6801,135.5061],['m18','本町店',34.6826,135.4989],['m19','長堀橋店',34.6746,135.5062],['m20','心斎橋北店',34.6765,135.5011]
+].map(a => ({ id: a[0], name: a[1], lat: a[2], lng: a[3] }));
 
-var stores = defStores;
-try { var sv = JSON.parse(localStorage.getItem('mac_v12')); if (sv && sv.length) stores = sv; } catch(e){}
-var sel = null, markers = {}, circles = {}, userM = null, cool = false, cTimer = null;
-
-function getStat(v) {
-  if (!v) return { lv:0, t:"未制圧", r:0 };
-  if (v < 3) return { lv:1, t:"前線陣地", r:300 };
-  if (v < 7) return { lv:2, t:"監視砦", r:500 };
-  if (v < 15) return { lv:3, t:"要塞都市", r:800 };
-  if (v < 30) return { lv:4, t:"大都督府", r:1200 };
-  return { lv:5, t:"覇王の王都", r:2000 };
+/* ---------- state & storage ---------- */
+const KEY = 'mce_v2';
+const fresh = () => ({ v: 2, start: Date.now(), updated: 0, stores: DEF_STORES.map(s => ({ ...s })), log: [] });
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function valid(o) { return o && Array.isArray(o.stores) && Array.isArray(o.log); }
+function loadLocal() {
+  try { const o = JSON.parse(lsGet(KEY)); if (valid(o)) return o; } catch (e) {}
+  // migrate the earlier Leaflet build (mac_v12) if it lives on the same origin
+  try {
+    const old = JSON.parse(lsGet('mac_v12'));
+    if (Array.isArray(old) && old.length) {
+      const st = Date.parse(lsGet('mac_start') || '') || Date.now();
+      const o = fresh(); o.start = st; o.stores = []; o.log = [];
+      old.forEach(s => {
+        o.stores.push({ id: s.id, name: s.name, lat: s.lat, lng: s.lng });
+        const per = s.visits ? Math.round((s.pt || 0) / s.visits) : 0;
+        for (let i = 0; i < (s.visits || 0); i++) o.log.push({ s: s.id, t: st, p: per, k: 'set' });
+      });
+      return o;
+    }
+  } catch (e) {}
+  return null;
 }
+let state = loadLocal() || fresh();
+let dbRef = null, writing = Promise.resolve(), saveTimer = null, storeMode = 'この端末';
 
-function render() {
-  stores.forEach(function(s) {
-    if (markers[s.id]) return;
-    var c = s.visits > 0;
-    
-    // 【店名常時表示用アイコン】
-    var labelHtml = '<div class="store-label ' + (c ? 'conquered' : '') + '">' + s.name + '</div>';
-    var labelIcon = L.divIcon({ html: labelHtml, className: '', iconSize: [100, 24], iconAnchor: [50, -4] });
-    L.marker([s.lat, s.lng], { icon: labelIcon, interactive: false }).addTo(map);
-
-    var m = L.circleMarker([s.lat, s.lng], { radius: c?11:9, color: c?'#ffd700':'#00ffcc', fillColor: c?'#ff0000':'#222', fillOpacity:0.95, weight:3 }).addTo(map);
-    m.on('click', function() { playSound('select'); selectStore(s); });
-    markers[s.id] = m;
-    
-    if (c) circles[s.id] = L.circle([s.lat, s.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:getStat(s.visits).r, interactive: false }).addTo(map);
-  });
-  updHead();
-}
-
-function selectStore(s) {
-  sel = s; var st = getStat(s.visits);
-  document.getElementById('panel').style.display = 'block';
-  document.getElementById('panel-title').innerText = "🏯 " + s.name;
-  document.getElementById('panel-info').innerText = s.visits ? ("Lv." + st.lv + " " + st.t + " (侵攻:" + s.visits + "回 / 半径:" + st.r + "m)") : "状態：未制圧 ｜ 兵糧を選んで制圧せよ";
-  map.panTo([s.lat, s.lng]);
-}
-
-function closePanel() {
-  playSound('select');
-  document.getElementById('panel').style.display = 'none';
-}
-
-function invade(pt, menu) {
-  if (!sel || cool) return;
-  cool = true;
-  var btns = document.querySelectorAll('.btn-attack');
-  btns.forEach(function(b){ b.disabled = true; });
-  var first = (sel.visits === 0), oldLv = getStat(sel.visits).lv;
-  sel.visits++; sel.pt += pt;
-  var ns = getStat(sel.visits);
-  localStorage.setItem('mac_v12', JSON.stringify(stores));
-  
-  markers[sel.id].setStyle({ color:'#ffd700', fillColor:'#ff0000', radius:11 });
-  if (circles[sel.id]) circles[sel.id].setRadius(ns.r);
-  else circles[sel.id] = L.circle([sel.lat, sel.lng], { color:'#d4af37', weight:1, fillColor:'#ffcc00', fillOpacity:0.25, radius:ns.r, interactive: false }).addTo(map);
-  
-  var ci = document.getElementById('cutin');
-  if (cTimer) clearTimeout(cTimer);
-  playSound((first || ns.lv > oldLv) ? 'levelup' : 'attack');
-  ci.innerText = first ? (sel.name + "、完全制圧！") : (ns.lv > oldLv ? ("城郭進化！【" + ns.t + "】") : (menu + "で内政強化！"));
-  ci.style.display = 'block';
-  selectStore(sel); updHead();
-  
-  // 【超高速化】演出ウェイトを800msに短縮し、サクサク動かす
-  cTimer = setTimeout(function() { ci.style.display = 'none'; cool = false; btns.forEach(function(b){ b.disabled = false; }); }, 800);
-}
-
-function updHead() {
-  var c = 0, p = 0;
-  stores.forEach(function(s){ if (s.visits > 0) c++; p += s.pt; });
-  document.getElementById('conquered-count').innerText = c;
-  document.getElementById('total-pt').innerText = p.toLocaleString();
-  var r = p>=5000 ? "天下無双の覇王" : p>=3000 ? "大阪管領" : p>=1500 ? "一城の主" : p>=500 ? "足軽大将" : "浪人（見習い）";
-  document.getElementById('rank-display').innerText = "【称号】" + r;
-}
-
-function scanAreaStores() {
-  var btn = document.getElementById('scan-btn'); btn.innerText = "⏳ 偵察中..."; playSound('select');
-  var b = map.getBounds(), bx = b.getSouth() + "," + b.getWest() + "," + b.getNorth() + "," + b.getEast();
-  var q = "[out:json][timeout:10];(node[amenity=fast_food](" + bx + ");way[amenity=fast_food](" + bx + "););out center;";
-  fetch("https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(q)).then(function(r){ return r.json(); }).then(function(d) {
-    var add = 0;
-    (d.elements || []).forEach(function(el) {
-      var t = el.tags || {}, n = (t.name||"") + (t.branch||"") + (t.brand||"");
-      if (n.indexOf("マクド") === -1 && n.indexOf("McDonald") === -1) return;
-      var lat = el.lat || (el.center && el.center.lat), lng = el.lon || (el.center && el.center.lon);
-      if (!lat || !lng) return;
-      var ex = stores.some(function(s){ return Math.abs(s.lat - lat) < 0.0012 && Math.abs(s.lng - lng) < 0.0012; });
-      if (!ex) { 
-        var cleanName = (t.branch || t.name || "発見拠点").replace(/マクドナルド|マクド|McDonald's/g, '').trim() || "マクドナルド";
-        stores.push({ id:"o_"+el.id, name: cleanName, lat:lat, lng:lng, visits:0, pt:0 }); add++; 
-      }
+function save() {
+  state.updated = Date.now();
+  const json = JSON.stringify(state);
+  lsSet(KEY, json);
+  if (!dbRef) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const body = { json: JSON.stringify(state), updated: state.updated };
+    writing = writing.then(() => dbRef.set(body)).catch(err => {
+      if (err && err.code === 'unavailable') return new Promise(r => setTimeout(r, 800 + Math.random() * 800)).then(() => dbRef.set(body)).catch(() => {});
+      if (err && err.code === 'quota_exceeded') say('記録の保存容量が上限です。記録管理から古いデータを書き出してください', 'warn');
     });
-    localStorage.setItem('mac_v12', JSON.stringify(stores)); render();
-    btn.innerText = "🔍 完了(+" + add + "城)"; sb.innerText = "🟢 新たに " + add + " 城を発見！";
-    setTimeout(function(){ btn.innerText = "🔍 周辺を偵察"; }, 2500);
-  }).catch(function(){ sb.innerText = "⚠️ 少し地図を拡大して再試行してください"; btn.innerText = "🔍 周辺を偵察"; });
+  }, 500);
 }
 
-function openMenu() {
-  playSound('select');
-  var tv = 0, cc = 0, tp = 0;
-  stores.forEach(function(s){ tv += s.visits; if (s.visits > 0) cc++; tp += s.pt; });
-  
-  var treasures = [
-    { pt: 300, name: "🍔 黄金のビッグマック像", desc: "兵力300で解放。輝く純金のパティが士気を高める。" },
-    { pt: 1000, name: "👑 覇王のポテトホルダー", desc: "兵力1000で解放。揚げたての熱を永遠に保つ魔導具。" },
-    { pt: 2500, name: "☕ 秘伝のマックカフェの壺", desc: "兵力2500で解放。極上の香りで全軍の疲労を癒す。" },
-    { pt: 5000, name: "🏆 黄金のゴールデンアーチ旗", desc: "兵力5000で解放。天下統一の覇者のみが掲げられる至宝。" }
-  ];
-  
-  var treasureHtml = "<h4 style='color:#ffd700;margin-top:10px;margin-bottom:6px;'>🎁 解放された天下秘宝</h4>";
-  treasures.forEach(function(tr) {
-    if (tp >= tr.pt) {
-      treasureHtml += "<div class='treasure-item'><b>" + tr.name + "</b><br><span style='color:#aaa;font-size:11px;'>" + tr.desc + "</span></div>";
+async function connectCloud() {
+  try {
+    if (!window.claude || !window.claude.use) return;
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user) return;
+    const id = await user.id();
+    if (!id) return;
+    dbRef = db.doc('data/users/' + id + '/empire');
+    const snap = await dbRef.get();
+    if (snap.exists) {
+      let remote = null;
+      try { remote = JSON.parse(snap.data().json); } catch (e) {}
+      if (valid(remote) && (remote.updated || 0) >= (state.updated || 0)) {
+        state = remote; lsSet(KEY, JSON.stringify(state)); recompute(); draw(); refreshHeader();
+      } else if (state.updated) save();
+    } else if (state.updated) save();
+    storeMode = 'クラウド（あなた専用）';
+  } catch (e) { dbRef = null; }
+}
+
+/* ---------- derived ---------- */
+let D = {}, S = null;
+function recompute() {
+  D = {};
+  state.stores.forEach(s => { D[s.id] = { v: 0, p: 0, last: 0 }; });
+  const k = { asa: 0, set: 0, gen: 0, cafe: 0 };
+  let pt = 0, tv = 0;
+  state.log.forEach(e => {
+    const d = D[e.s]; if (!d) return;
+    d.v++; d.p += e.p; if (e.t > d.last) d.last = e.t;
+    pt += e.p; tv++; if (k[e.k] != null) k[e.k]++;
+  });
+  let cc = 0, lv5 = 0, fallen = 0, soon = 0;
+  state.stores.forEach(s => {
+    const d = D[s.id], L = lvOf(d.v); d.L = L;
+    d.days = d.v ? Math.floor((Date.now() - d.last) / DAY) : 0;
+    d.fallen = d.v > 0 && L.lv < 5 && d.days >= GUARD;
+    if (d.v) cc++; if (L.lv >= 5) lv5++; if (d.fallen) fallen++;
+    else if (d.v && L.lv < 5 && GUARD - d.days <= 14) soon++;
+  });
+  S = { pt, tv, cc, lv5, k, fallen, soon };
+}
+
+/* ---------- map projection ---------- */
+const LAT0 = 34.68, LNG0 = 135.50;
+const KX = 111320 * Math.cos(LAT0 * Math.PI / 180), KY = 110540;
+const toXY = (lat, lng) => [(lng - LNG0) * KX, -(lat - LAT0) * KY];
+const toLL = (x, y) => [LAT0 - y / KY, LNG0 + x / KX];
+const cv = $('#map'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+const view = { cx: 0, cy: 0, s: 0.08 };
+let selected = null, me = null, buildMode = false, moveId = null, G = null;
+const terr = document.createElement('canvas'), tctx = terr.getContext('2d');
+const ring = document.createElement('canvas'), rctx = ring.getContext('2d');
+
+function resize() {
+  const r = cv.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+  W = r.width; H = r.height;
+  [cv, terr, ring].forEach(c => { c.width = Math.max(1, Math.round(W * DPR)); c.height = Math.max(1, Math.round(H * DPR)); });
+  draw();
+}
+const sx = x => W / 2 + (x - view.cx) * view.s;
+const sy = y => H / 2 + (y - view.cy) * view.s;
+const wx = px => view.cx + (px - W / 2) / view.s;
+const wy = py => view.cy + (py - H / 2) / view.s;
+
+function fitAll(animate) {
+  if (G) {
+    const b = new google.maps.LatLngBounds();
+    state.stores.forEach(s => b.extend({ lat: s.lat, lng: s.lng })); if (me) b.extend({ lat: me.lat, lng: me.lng });
+    if (!b.isEmpty()) G.map.fitBounds(b, 40); return;
+  }
+  const pts = state.stores.map(s => toXY(s.lat, s.lng));
+  if (me) pts.push(toXY(me.lat, me.lng));
+  if (!pts.length) return;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  pts.forEach(([x, y]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+  const pad = 600;
+  const s = Math.min((W || 360) / (x1 - x0 + pad * 2), (H || 500) / (y1 - y0 + pad * 2));
+  flyTo((x0 + x1) / 2, (y0 + y1) / 2, clampS(s), animate);
+}
+const clampS = s => Math.max(0.004, Math.min(2.5, s));
+let flyRAF = 0;
+function flyTo(cx, cy, s, animate) {
+  cancelAnimationFrame(flyRAF);
+  if (!animate || matchMedia('(prefers-reduced-motion: reduce)').matches) { view.cx = cx; view.cy = cy; view.s = s; draw(); return; }
+  const a = { ...view }, t0 = performance.now(), dur = 380;
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 3);
+    view.cx = a.cx + (cx - a.cx) * e; view.cy = a.cy + (cy - a.cy) * e;
+    view.s = Math.exp(Math.log(a.s) + (Math.log(s) - Math.log(a.s)) * e);
+    draw(); if (t < 1) flyRAF = requestAnimationFrame(step);
+  };
+  flyRAF = requestAnimationFrame(step);
+}
+function focusStore(s) {
+  if (G) {
+    const sh = Math.min(H * 0.62, 420);
+    if (G.map.getZoom() < 15) G.map.setZoom(15);
+    G.map.panTo({ lat: s.lat, lng: s.lng }); setTimeout(() => G.map.panBy(0, sh / 2), 60); return;
+  }
+  const [x, y] = toXY(s.lat, s.lng);
+  const sheetH = Math.min(H * 0.62, 420);
+  const targetS = Math.max(view.s, 0.12);
+  // place the castle in the visible band above the sheet
+  const offsetPx = (H / 2) - (H - sheetH) / 2;
+  flyTo(x, y + offsetPx / targetS, targetS, true);
+}
+
+/* ---------- drawing ---------- */
+let drawQueued = false;
+function draw() { if (drawQueued) return; drawQueued = true; requestAnimationFrame(paint); }
+function P(lat, lng) {
+  if (G) {
+    const pr = G.ov.getProjection(); if (!pr) return [-9999, -9999];
+    const q = pr.fromLatLngToContainerPixel(new google.maps.LatLng(lat, lng)); return [q.x, q.y];
+  }
+  const [x, y] = toXY(lat, lng); return [sx(x), sy(y)];
+}
+function pxPerMeter() {
+  if (!G) return view.s;
+  const c = G.map.getCenter(); if (!c) return 0.1;
+  const a = P(c.lat(), c.lng()), b = P(c.lat(), c.lng() + 1000 / KX);
+  return Math.hypot(b[0] - a[0], b[1] - a[1]) / 1000;
+}
+const fontVar = n => getComputedStyle(document.documentElement).getPropertyValue(n);
+function paint() {
+  drawQueued = false;
+  if (!W) return;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const ppm = pxPerMeter();
+  const steps = [100, 250, 500, 1000, 2000, 5000, 10000, 20000];
+  if (G) ctx.clearRect(0, 0, W, H);
+  else {
+    const g = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.8);
+    g.addColorStop(0, '#17140f'); g.addColorStop(1, '#0b0a08');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const step = steps.find(st => st * view.s >= 64) || 20000;
+    ctx.strokeStyle = 'rgba(212,175,55,0.07)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = Math.floor(wx(0) / step) * step; x <= wx(W); x += step) { const p = Math.round(sx(x)) + .5; ctx.moveTo(p, 0); ctx.lineTo(p, H); }
+    for (let y = Math.floor(wy(0) / step) * step; y <= wy(H); y += step) { const p = Math.round(sy(y)) + .5; ctx.moveTo(0, p); ctx.lineTo(W, p); }
+    ctx.stroke();
+    if (view.s > 0.02) {
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const fs = Math.max(13, Math.min(30, view.s * 180));
+      ctx.font = '800 ' + fs + 'px ' + fontVar('--font-display');
+      ctx.fillStyle = 'rgba(239,230,208,0.09)';
+      DISTRICTS.forEach(([n, la, lo]) => { const [px, py] = P(la, lo); ctx.fillText(n.split('').join(' '), px, py); });
+    }
+  }
+
+  // territory: union of circles
+  const live = state.stores.filter(s => D[s.id] && D[s.id].v && !D[s.id].fallen);
+  tctx.setTransform(DPR, 0, 0, DPR, 0, 0); tctx.clearRect(0, 0, W, H);
+  rctx.setTransform(DPR, 0, 0, DPR, 0, 0); rctx.clearRect(0, 0, W, H);
+  if (live.length) {
+    tctx.fillStyle = '#d4af37'; tctx.beginPath();
+    rctx.fillStyle = '#f0d68a'; rctx.beginPath();
+    live.forEach(s => { const [px, py] = P(s.lat, s.lng), r = D[s.id].L.r * ppm; tctx.moveTo(px + r, py); tctx.arc(px, py, r, 0, Math.PI * 2); rctx.moveTo(px + r + 1.6, py); rctx.arc(px, py, r + 1.6, 0, Math.PI * 2); });
+    tctx.fill(); rctx.fill();
+    rctx.globalCompositeOperation = 'destination-out'; rctx.drawImage(terr, 0, 0, W, H); rctx.globalCompositeOperation = 'source-over';
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = G ? 0.22 : 0.17; ctx.drawImage(terr, 0, 0);
+    ctx.globalAlpha = 0.85; ctx.drawImage(ring, 0, 0);
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(240,214,138,0.35)'; ctx.setLineDash([2, 4]); ctx.lineWidth = 1;
+    live.forEach(s => { if (D[s.id].L.lv >= 5) { const [px, py] = P(s.lat, s.lng); ctx.beginPath(); ctx.arc(px, py, D[s.id].L.r * ppm * 0.6, 0, Math.PI * 2); ctx.stroke(); } });
+    ctx.setLineDash([]);
+  }
+  state.stores.forEach(s => {
+    const d = D[s.id]; if (!d || !d.fallen) return;
+    const [px, py] = P(s.lat, s.lng);
+    ctx.setLineDash([6, 5]); ctx.strokeStyle = 'rgba(199,52,43,0.8)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(px, py, d.L.r * ppm, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+  });
+
+  if (me) {
+    const [px, py] = P(me.lat, me.lng);
+    const acc = Math.max(8, (me.acc || 30) * ppm);
+    ctx.fillStyle = 'rgba(90,160,255,0.14)'; ctx.beginPath(); ctx.arc(px, py, acc, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4a90ff'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  }
+
+  const order = state.stores.slice().sort((a, b) => (D[a.id].v - D[b.id].v));
+  const fontD = fontVar('--font-display'), fontB = fontVar('--font-body');
+  order.forEach(s => {
+    const d = D[s.id], [px, py] = P(s.lat, s.lng);
+    if (px < -40 || py < -40 || px > W + 40 || py > H + 40) return;
+    const r = pinR(s);
+    if (selected === s.id || moveId === s.id) {
+      ctx.strokeStyle = moveId === s.id ? '#5cc4a0' : '#f0d68a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(px, py, r + 7, 0, Math.PI * 2); ctx.stroke();
+    }
+    if (d.v) {
+      ctx.fillStyle = d.fallen ? '#4a1414' : '#a31e1e'; ctx.strokeStyle = d.fallen ? '#c7342b' : '#f0d68a'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(px, py - r); ctx.lineTo(px + r, py); ctx.lineTo(px, py + r); ctx.lineTo(px - r, py); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#f0d68a'; ctx.font = '800 ' + Math.round(r * 0.95) + 'px ' + fontD;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(String(d.L.lv), px, py + 1);
     } else {
-      treasureHtml += "<div class='treasure-item' style='opacity:0.4;'>🔒 ??? (必要兵力: " + tr.pt + " pt)</div>";
+      ctx.fillStyle = 'rgba(13,12,10,0.9)'; ctx.strokeStyle = '#5cc4a0'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     }
   });
 
-  document.getElementById('modal-stats-text').innerHTML = 
-    "<p><b>🚩 初陣:</b> " + localStorage.getItem('mac_start') + "</p>" +
-    "<p><b>🏯 制圧拠点:</b> " + cc + " / " + stores.length + " 城</p>" +
-    "<p><b>⚔️ 総侵攻回数:</b> " + tv + " 回</p>" +
-    "<p><b>💰 総兵力:</b> " + tp.toLocaleString() + " pt</p>" +
-    treasureHtml;
+  const placed = [];
+  ctx.font = '700 11px ' + fontB; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const lab = state.stores.slice().sort((a, b) => (b.id === selected) - (a.id === selected) || D[b.id].v - D[a.id].v);
+  lab.forEach(s => {
+    const d = D[s.id], [px, py] = P(s.lat, s.lng);
+    if (px < -80 || py < -40 || px > W + 80 || py > H + 40) return;
+    const w = ctx.measureText(s.name).width + 10, h = 17, top = py + pinR(s) + 4;
+    const box = [px - w / 2, top, px + w / 2, top + h];
+    if (s.id !== selected && placed.some(b => !(box[2] < b[0] || box[0] > b[2] || box[3] < b[1] || box[1] > b[3]))) return;
+    placed.push(box);
+    ctx.fillStyle = d.v ? (d.fallen ? 'rgba(60,15,15,0.92)' : 'rgba(120,20,20,0.92)') : 'rgba(13,12,10,0.85)';
+    ctx.strokeStyle = d.v ? 'rgba(240,214,138,0.8)' : 'rgba(92,196,160,0.5)'; ctx.lineWidth = 1;
+    roundRect(box[0], box[1], w, h, 3); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = d.v ? '#fff' : '#d9e9df'; ctx.fillText(s.name, px, top + h / 2 + 0.5);
+  });
 
-  document.getElementById('modal-overlay').style.display = 'flex';
-}
-
-function closeMenuDirect() { playSound('select'); document.getElementById('modal-overlay').style.display = 'none'; }
-function confirmReset() {
-  if (confirm("【警告】本当にすべての領土と歴史を消去し、最初からやり直しますか？")) {
-    if (confirm("【最終確認】元に戻せません。本当にリセットしますか？")) { localStorage.clear(); location.reload(); }
+  if (!G) {
+    const sb = steps.find(st => st * view.s >= 70) || 20000, len = sb * view.s;
+    const bx = 14, by = H - 18;
+    ctx.strokeStyle = 'rgba(239,230,208,0.6)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(bx, by - 5); ctx.lineTo(bx, by); ctx.lineTo(bx + len, by); ctx.lineTo(bx + len, by - 5); ctx.stroke();
+    ctx.fillStyle = 'rgba(239,230,208,0.7)'; ctx.font = '500 10px ' + fontB; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText(sb >= 1000 ? (sb / 1000) + ' km' : sb + ' m', bx + 4, by - 3);
   }
 }
-function locateUser() {
-  playSound('select'); sb.innerText = "⏳ GPS特定中...";
-  navigator.geolocation.getCurrentPosition(function(p) {
-    var lt = p.coords.latitude, lg = p.coords.longitude;
-    if (userM) userM.setLatLng([lt, lg]);
-    else userM = L.circleMarker([lt, lg], { radius:8, color:'#fff', fillColor:'#0088ff', fillOpacity:1, weight:3 }).addTo(map);
-    map.setView([lt, lg], 16); sb.innerText = "🟢 現在地へ移動完了！";
-  }, function(){ sb.innerText = "⚠️ GPS許可を確認してください"; }, { enableHighAccuracy:true });
+const pinR = s => D[s.id].v ? 8 + D[s.id].L.lv * 1.2 : 6;
+function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
+
+/* ---------- gestures ---------- */
+const pts = new Map(); let gesture = null;
+cv.addEventListener('pointerdown', e => {
+  cv.setPointerCapture(e.pointerId);
+  pts.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+  cancelAnimationFrame(flyRAF);
+  if (pts.size === 1) gesture = { tap: true, t: performance.now(), x: e.offsetX, y: e.offsetY, cx: view.cx, cy: view.cy };
+  else if (pts.size === 2) {
+    const [a, b] = [...pts.values()];
+    gesture = { tap: false, d: Math.hypot(a.x - b.x, a.y - b.y), s: view.s, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, wx: wx((a.x + b.x) / 2), wy: wy((a.y + b.y) / 2) };
+  }
+});
+cv.addEventListener('pointermove', e => {
+  if (!pts.has(e.pointerId) || !gesture) return;
+  pts.set(e.pointerId, { x: e.offsetX, y: e.offsetY });
+  if (pts.size === 1 && gesture.cx != null) {
+    const dx = e.offsetX - gesture.x, dy = e.offsetY - gesture.y;
+    if (Math.hypot(dx, dy) > 8) gesture.tap = false;
+    if (!gesture.tap) { view.cx = gesture.cx - dx / view.s; view.cy = gesture.cy - dy / view.s; draw(); }
+  } else if (pts.size === 2 && gesture.d) {
+    const [a, b] = [...pts.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    view.s = clampS(gesture.s * d / gesture.d);
+    view.cx = gesture.wx - (mx - W / 2) / view.s; view.cy = gesture.wy - (my - H / 2) / view.s;
+    draw();
+  }
+});
+function endPtr(e) {
+  if (!pts.has(e.pointerId)) return;
+  pts.delete(e.pointerId);
+  if (gesture && gesture.tap && pts.size === 0 && performance.now() - gesture.t < 600) onTap(e.offsetX, e.offsetY);
+  if (pts.size === 1) { const [p] = [...pts.values()]; gesture = { tap: false, t: 0, x: p.x, y: p.y, cx: view.cx, cy: view.cy }; }
+  else if (pts.size === 0) gesture = null;
+}
+cv.addEventListener('pointerup', endPtr);
+cv.addEventListener('pointercancel', endPtr);
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = Math.exp(-e.deltaY * 0.0015), mx = e.offsetX, my = e.offsetY, ax = wx(mx), ay = wy(my);
+  view.s = clampS(view.s * f); view.cx = ax - (mx - W / 2) / view.s; view.cy = ay - (my - H / 2) / view.s; draw();
+}, { passive: false });
+
+function onTap(px, py, ll) {
+  if (!ll) ll = G ? null : toLL(wx(px), wy(py));
+  if (moveId && ll) {
+    const s = byId(moveId); moveId = null;
+    if (s) { s.lat = +ll[0].toFixed(6); s.lng = +ll[1].toFixed(6); save(); say('「' + s.name + '」の位置を直しました', 'good'); select(s.id); }
+    return;
+  }
+  if (buildMode && ll) { openBuild(ll[0], ll[1]); return; }
+  let best = null, bd = 24;
+  state.stores.forEach(s => { const [x, y] = P(s.lat, s.lng), d = Math.hypot(x - px, y - py); if (d < bd) { bd = d; best = s; } });
+  if (best) { sfx('select'); select(best.id); }
+  else if (selected) closeSheet();
 }
 
-render();
-sb.innerText = "🟢 12号機稼働中：店名表示＆超高速レスポンス！";
+/* ---------- audio ---------- */
+const AC = window.AudioContext || window.webkitAudioContext; let ac = null, bgmTimer = null;
+function actx() { if (!ac && AC) ac = new AC(); if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+function tone(type, f0, f1, gain, dur, at) {
+  const c = actx(); if (!c) return; const t = c.currentTime + (at || 0);
+  const o = c.createOscillator(), g = c.createGain(); o.type = type;
+  o.frequency.setValueAtTime(f0, t); if (f1) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+function sfx(kind) {
+  try {
+    if (kind === 'select') tone('sine', 620, 0, 0.08, 0.06);
+    else if (kind === 'attack') { tone('triangle', 150, 42, 0.45, 0.28); tone('square', 90, 40, 0.08, 0.12); }
+    else if (kind === 'levelup') [523.2, 659.2, 784, 1046.5, 1318.5].forEach((f, i) => tone('sawtooth', f, 0, 0.11, 0.35, i * 0.07));
+    else if (kind === 'treasure') [784, 988, 1175, 1568].forEach((f, i) => tone('triangle', f, 0, 0.12, 0.5, i * 0.09));
+    if (navigator.vibrate) navigator.vibrate(kind === 'levelup' || kind === 'treasure' ? [50, 30, 110] : kind === 'attack' ? 40 : 12);
+  } catch (e) {}
+}
+$('#b-bgm').addEventListener('click', () => {
+  const b = $('#b-bgm');
+  if (bgmTimer) { clearInterval(bgmTimer); bgmTimer = null; b.classList.remove('on'); return; }
+  if (!actx()) return;
+  b.classList.add('on');
+  const notes = [110, 110, 164.8, 110, 130.8, 146.8, 110, 98]; let i = 0;
+  bgmTimer = setInterval(() => {
+    const n = notes[i % notes.length];
+    tone('sawtooth', n, 0, 0.05, 0.24);
+    if (i % 4 === 0) tone('triangle', 70, 38, 0.25, 0.22);
+    i++;
+  }, 300);
+});
+
+/* ---------- ticker & header ---------- */
+let tickTimer = null;
+function say(msg, tone) {
+  const t = $('#ticker'); t.textContent = msg; t.className = 'ticker' + (tone ? ' ' + tone : '');
+  clearTimeout(tickTimer);
+  if (tone) tickTimer = setTimeout(idleTicker, 6000);
+}
+function idleTicker() {
+  if (S.fallen) return say(S.fallen + '城で治安が悪化しています。城一覧から確認できます', '');
+  if (S.soon) return say(S.soon + '城の治安維持期限が14日以内に迫っています', '');
+  if (!S.tv) return say('城をタップし、注文した兵糧を選ぶと制圧できます', '');
+  const today = state.log.filter(e => new Date(e.t).toDateString() === new Date().toDateString()).length;
+  say(today ? '本日の出陣 ' + today + '回。総侵攻 ' + S.tv + '回' : '本日はまだ出陣していません。総侵攻 ' + S.tv + '回', '');
+}
+function refreshHeader() {
+  $('#h-cc').textContent = S.cc;
+  $('#h-pt').textContent = S.pt.toLocaleString();
+  $('#rank').textContent = rankOf(S.pt)[1];
+  idleTicker();
+}
+
+/* ---------- sheet ---------- */
+const sheet = $('#sheet');
+let undoUntil = 0, undoTimer = null, cool = false, removeArm = false;
+function select(id) { selected = id; removeArm = false; renderSheet(); const s = byId(id); if (s) focusStore(s); draw(); }
+function closeSheet() { selected = null; sheet.hidden = true; draw(); }
+const byId = id => state.stores.find(s => s.id === id);
+const fmtD = t => { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+
+function renderSheet() {
+  const s = byId(selected); if (!s) { sheet.hidden = true; return; }
+  const d = D[s.id], L = d.L, next = LEVELS[L.lv + 1];
+  let guard = '';
+  if (!d.v) guard = '<div class="guard">未制圧の城。注文した兵糧を選ぶと制圧します</div>';
+  else if (L.lv >= 5) guard = '<div class="guard eternal">永久不落。防衛期限はありません</div>';
+  else if (d.fallen) guard = '<div class="guard fallen">治安悪化中。最終来訪から' + d.days + '日経過。再訪で回復します</div>';
+  else { const left = GUARD - d.days; guard = '<div class="guard ' + (left <= 14 ? 'soon' : 'ok') + '">治安維持 あと<b>' + left + '日</b>（最終来訪 ' + fmtD(d.last) + '）</div>'; }
+  const prog = next ? Math.round((d.v - L.need) / (next.need - L.need) * 100) : 100;
+  const hr = new Date().getHours() + new Date().getMinutes() / 60;
+  const morning = hr >= 5 && hr < 10.5;
+  const hist = state.log.filter(e => e.s === s.id).slice(-4).reverse();
+  const today = state.log.some(e => e.s === s.id && new Date(e.t).toDateString() === new Date().toDateString());
+  sheet.innerHTML =
+    '<div class="sheet-head">' +
+      (d.v ? '<div class="seal"><div><b>' + L.lv + '</b><i>LV</i></div></div>' : '<div class="seal none"><div><b>空</b><i>LV 0</i></div></div>') +
+      '<div class="sheet-headtext"><div class="sheet-name">' + esc(s.name) + '</div>' +
+      '<div class="sheet-sub">' + (d.v ? L.t + ' ・ 侵攻' + d.v + '回 ・ 支配半径' + L.r.toLocaleString() + 'm ・ 兵力' + d.p.toLocaleString() : '未制圧') + '</div></div>' +
+      '<button class="x" id="sh-x" aria-label="閉じる">×</button>' +
+    '</div>' +
+    (next ? '<div class="meter"><div class="meter-row"><span>次は <b>Lv.' + next.lv + ' ' + next.t + '</b>（半径' + next.r.toLocaleString() + 'm）</span><span>あと' + (next.need - d.v) + '回</span></div><div class="bar"><i style="width:' + prog + '%"></i></div></div>' : '') +
+    guard +
+    '<div class="sect-label">兵糧を選んで出陣' + (today ? ' ・ 本日は出陣済み' : '') + '</div>' +
+    '<div class="rations">' + Object.keys(MENUS).map(k => {
+      const m = MENUS[k];
+      return '<button class="ration' + (k === 'asa' && morning ? ' hot' : '') + '" data-k="' + k + '"' + (cool ? ' disabled' : '') + '><span class="k">' + m.k + '</span><span>' + m.name + '<br><em>+' + m.pt + '</em></span></button>';
+    }).join('') + '</div>' +
+    (Date.now() < undoUntil ? '<div class="undo"><span>直前の出陣を記録しました</span><button class="linkbtn" id="sh-undo">取り消す</button></div>' : '') +
+    '<div class="sect-label">軍議メモ</div>' +
+    '<textarea id="sh-memo" placeholder="席の雰囲気、混む時間帯、限定品の在庫など">' + esc(s.memo || '') + '</textarea>' +
+    (hist.length ? '<div class="sect-label">戦歴</div><div class="history">' + hist.map(e => '<div><span>' + fmtD(e.t) + '</span><span>' + (MENUS[e.k] ? MENUS[e.k].name : '') + ' +' + e.p + '</span></div>').join('') + '</div>' : '') +
+    '<div class="sheet-foot"><button class="ghost" id="sh-rename">城の名を改める</button><button class="ghost" id="sh-move">位置を直す</button><button class="ghost danger" id="sh-remove">' + (removeArm ? 'もう一度押すと城と戦歴を削除' : '城を地図から外す') + '</button></div>';
+  sheet.hidden = false;
+  $('#sh-x').onclick = () => { sfx('select'); closeSheet(); };
+  sheet.querySelectorAll('.ration').forEach(b => b.onclick = () => invade(b.dataset.k));
+  const u = $('#sh-undo'); if (u) u.onclick = undo;
+  const memo = $('#sh-memo');
+  memo.onchange = () => { s.memo = memo.value.slice(0, 2000); save(); };
+  $('#sh-rename').onclick = () => {
+    const foot = sheet.querySelector('.sheet-foot');
+    foot.innerHTML = '<input type="text" id="sh-newname" value="' + esc(s.name) + '" maxlength="30" style="flex:1;min-width:0"><button class="primary" id="sh-ok">改名</button>';
+    const inp = $('#sh-newname'); inp.focus(); inp.select();
+    $('#sh-ok').onclick = () => { const v = inp.value.trim(); if (v) { s.name = v; save(); } renderSheet(); draw(); };
+  };
+  $('#sh-move').onclick = () => { moveId = s.id; buildMode = false; $('#b-build').classList.remove('on'); sheet.hidden = true; say('「' + s.name + '」の正しい位置を地図上でタップしてください', 'good'); draw(); };
+  $('#sh-remove').onclick = () => {
+    if (!removeArm) { removeArm = true; renderSheet(); return; }
+    state.stores = state.stores.filter(x => x.id !== s.id);
+    state.log = state.log.filter(e => e.s !== s.id);
+    save(); recompute(); refreshHeader(); closeSheet(); say('「' + s.name + '」を地図から外しました', 'good');
+  };
+}
+
+function snapshotUnlocked() { return TREASURES.map(t => t.ok(S)); }
+function invade(k) {
+  const s = byId(selected); if (!s || cool) return;
+  cool = true;
+  const m = MENUS[k], before = D[s.id].v, oldLv = D[s.id].L.lv, wasFallen = D[s.id].fallen;
+  const oldRank = rankOf(S.pt)[1], oldT = snapshotUnlocked();
+  state.log.push({ s: s.id, t: Date.now(), p: m.pt, k: k });
+  save(); recompute();
+  const d = D[s.id];
+  const q = [];
+  if (before === 0) { q.push(['制圧', s.name + '、完全制圧！', 'levelup']); }
+  else if (d.L.lv > oldLv) q.push(['城郭進化', '【' + d.L.t + '】へ', 'levelup']);
+  else if (wasFallen) q.push(['奪還', '治安回復！', 'levelup']);
+  else q.push([m.name, '+' + m.pt + ' 内政強化！', 'attack']);
+  const newRank = rankOf(S.pt)[1];
+  if (newRank !== oldRank) q.push(['昇進', newRank, 'levelup']);
+  snapshotUnlocked().forEach((ok, i) => { if (ok && !oldT[i]) q.push(['秘宝獲得', TREASURES[i].name, 'treasure']); });
+  playCuts(q);
+  undoUntil = Date.now() + 15000; clearTimeout(undoTimer); undoTimer = setTimeout(() => { if (selected) renderSheet(); }, 15100);
+  renderSheet(); refreshHeader(); draw();
+  setTimeout(() => { cool = false; if (selected) renderSheet(); }, 1200);
+}
+function undo() {
+  const e = state.log[state.log.length - 1];
+  if (!e || Date.now() > undoUntil) return;
+  state.log.pop(); undoUntil = 0; save(); recompute(); refreshHeader(); renderSheet(); draw();
+  say('直前の出陣を取り消しました', 'good');
+}
+let cutQ = [], cutBusy = false;
+function playCuts(list) { cutQ.push(...list); if (!cutBusy) nextCut(); }
+function nextCut() {
+  const c = cutQ.shift(), el = $('#cutin');
+  if (!c) { cutBusy = false; el.hidden = true; return; }
+  cutBusy = true; $('#cut-ey').textContent = c[0]; $('#cut-tx').textContent = c[1];
+  el.hidden = false; el.classList.remove('play'); void el.offsetWidth; el.classList.add('play');
+  sfx(c[2]);
+  setTimeout(nextCut, 1300);
+}
+
+/* ---------- build mode ---------- */
+$('#b-build').addEventListener('click', () => {
+  sfx('select'); buildMode = !buildMode; $('#b-build').classList.toggle('on', buildMode);
+  if (buildMode) { closeSheet(); say('築城：地図上の店舗の位置をタップしてください', 'good'); }
+  else idleTicker();
+});
+function openBuild(lat, lng) {
+  selected = null;
+  sheet.innerHTML = '<div class="sheet-head"><div class="seal none"><div><b>築</b><i>NEW</i></div></div><div class="sheet-headtext"><div class="sheet-name">新しい城を築く</div><div class="sheet-sub">' + lat.toFixed(5) + ', ' + lng.toFixed(5) + '</div></div><button class="x" id="bd-x" aria-label="閉じる">×</button></div>' +
+    '<div class="sect-label">店舗名</div><input type="text" id="bd-name" maxlength="30" placeholder="例：北浜店">' +
+    '<div class="row"><button class="primary" id="bd-ok">この位置に築城</button><button class="ghost" id="bd-cancel">やめる</button></div>';
+  sheet.hidden = false;
+  const inp = $('#bd-name'); inp.focus();
+  const end = () => { buildMode = false; $('#b-build').classList.remove('on'); sheet.hidden = true; idleTicker(); };
+  $('#bd-x').onclick = end; $('#bd-cancel').onclick = end;
+  $('#bd-ok').onclick = () => {
+    const name = inp.value.trim(); if (!name) { inp.focus(); return; }
+    const s = { id: 'c' + Date.now().toString(36), name, lat: +lat.toFixed(6), lng: +lng.toFixed(6), custom: true };
+    state.stores.push(s); save(); recompute(); end(); select(s.id); say('「' + name + '」を築城しました', 'good');
+  };
+}
+
+/* ---------- GPS & auto lock-on ---------- */
+let watchId = null, lastLock = null;
+$('#b-loc').addEventListener('click', () => {
+  sfx('select');
+  if (!navigator.geolocation) return say('この端末では位置情報が使えません', 'warn');
+  say('現在地を特定中…', 'good');
+  const onPos = p => {
+    me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+    const near = nearest();
+    if (near && near.dist <= 80 && lastLock !== near.s.id) {
+      lastLock = near.s.id; sfx('levelup'); select(near.s.id);
+      say('ロックオン：' + near.s.name + '（' + Math.round(near.dist) + 'm）', 'good');
+    } else if (!selected) draw();
+  };
+  const onErr = err => {
+    say(err && err.code === 1 ? '位置情報が許可されていません。ホーム画面版（GitHub Pages）で使えます' : '現在地を取得できませんでした', 'warn');
+  };
+  navigator.geolocation.getCurrentPosition(p => {
+    onPos(p);
+    if (G) { G.map.panTo({ lat: me.lat, lng: me.lng }); if (G.map.getZoom() < 16) G.map.setZoom(16); }
+    else { const [x, y] = toXY(me.lat, me.lng); flyTo(x, y, Math.max(view.s, 0.25), true); }
+    const n = nearest(); if (n && n.dist > 80) say('最寄りの城：' + n.s.name + '（' + (n.dist >= 1000 ? (n.dist / 1000).toFixed(1) + 'km' : Math.round(n.dist) + 'm') + '）', 'good');
+    if (watchId == null) watchId = navigator.geolocation.watchPosition(onPos, () => {}, { enableHighAccuracy: true, maximumAge: 15000 });
+  }, onErr, { enableHighAccuracy: true, timeout: 12000 });
+});
+function nearest() {
+  if (!me) return null; const [mx, my] = toXY(me.lat, me.lng); let best = null;
+  state.stores.forEach(s => { const [x, y] = toXY(s.lat, s.lng), d = Math.hypot(x - mx, y - my); if (!best || d < best.dist) best = { s, dist: d }; });
+  return best;
+}
+
+/* ---------- Google Maps ---------- */
+const GKEY = 'mce_gkey';
+const GSTYLE = [
+  { elementType: 'geometry', stylers: [{ color: '#17140f' }] },
+  { elementType: 'labels.text.fill', stylers: [{ color: '#a69c86' }] },
+  { elementType: 'labels.text.stroke', stylers: [{ color: '#0d0c0a' }] },
+  { elementType: 'labels.icon', stylers: [{ saturation: -100 }, { lightness: -30 }] },
+  { featureType: 'administrative', elementType: 'geometry', stylers: [{ color: '#3a3124' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#2a241b' }] },
+  { featureType: 'road', elementType: 'labels.text.fill', stylers: [{ color: '#7d7462' }] },
+  { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#45381f' }] },
+  { featureType: 'transit.line', elementType: 'geometry', stylers: [{ color: '#4a3d27' }] },
+  { featureType: 'transit.station', elementType: 'labels.text.fill', stylers: [{ color: '#d4af37' }] },
+  { featureType: 'water', elementType: 'geometry', stylers: [{ color: '#0b1619' }] },
+  { featureType: 'landscape.man_made', elementType: 'geometry', stylers: [{ color: '#1c1813' }] }
+];
+let mapStatus = '陣図（オフライン）';
+function loadGoogle() {
+  const key = (lsGet(GKEY) || '').trim();
+  if (!key) return;
+  mapStatus = 'Googleマップを読み込み中';
+  window.gm_authFailure = () => { disableGoogle(); say('APIキーが拒否されました。キーの制限（リファラー）とMaps JavaScript APIの有効化を確認してください', 'warn'); };
+  window.__mceGoogleReady = initGoogle;
+  const sc = document.createElement('script');
+  sc.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&v=weekly&language=ja&region=JP&libraries=places&loading=async&callback=__mceGoogleReady';
+  sc.async = true;
+  sc.onerror = () => { mapStatus = '陣図（Googleマップはこの画面では読み込めません）'; };
+  document.head.appendChild(sc);
+}
+function initGoogle() {
+  try {
+    const el = $('#gmap'); el.hidden = false;
+    const map = new google.maps.Map(el, {
+      center: { lat: 34.685, lng: 135.505 }, zoom: 14, styles: GSTYLE, disableDefaultUI: true,
+      gestureHandling: 'greedy', clickableIcons: false, backgroundColor: '#17140f'
+    });
+    class Ov extends google.maps.OverlayView { onAdd() {} draw() { draw(); } onRemove() {} }
+    const ov = new Ov(); ov.setMap(map);
+    G = { map, ov };
+    document.body.classList.add('g');
+    map.addListener('bounds_changed', draw);
+    map.addListener('click', e => {
+      const pr = ov.getProjection(); if (!pr || !e.latLng) return;
+      const q = pr.fromLatLngToContainerPixel(e.latLng);
+      onTap(q.x, q.y, [e.latLng.lat(), e.latLng.lng()]);
+    });
+    google.maps.event.addListenerOnce(map, 'idle', () => { if (selected) focusStore(byId(selected)); else fitAll(false); draw(); });
+    mapStatus = 'Googleマップ';
+  } catch (e) { disableGoogle(); }
+}
+function disableGoogle() {
+  G = null; document.body.classList.remove('g'); $('#gmap').hidden = true; mapStatus = '陣図（Googleマップに接続できませんでした）'; draw();
+}
+
+/* ---------- scout (Overpass) ---------- */
+$('#b-scan').addEventListener('click', () => {
+  sfx('select'); say('周辺を偵察中…', 'good');
+  if (G) return scoutGoogle();
+  const [la0, lo0] = toLL(wx(0), wy(H)), [la1, lo1] = toLL(wx(W), wy(0));
+  if ((la1 - la0) * (lo1 - lo0) > 0.04) return say('範囲が広すぎます。地図を拡大してから偵察してください', 'warn');
+  const bx = [la0, lo0, la1, lo1].map(v => v.toFixed(5)).join(',');
+  const q = '[out:json][timeout:10];(nwr["brand:wikidata"="Q38076"](' + bx + ');nwr[amenity=fast_food][name~"マクドナルド|McDonald"](' + bx + '););out center;';
+  fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q)).then(r => r.json()).then(dt => {
+    let add = 0;
+    (dt.elements || []).forEach(el => {
+      const t = el.tags || {}, lat = el.lat || (el.center && el.center.lat), lng = el.lon || (el.center && el.center.lon);
+      if (!lat || !lng) return;
+      const [x, y] = toXY(lat, lng);
+      if (state.stores.some(s => { const [a, b] = toXY(s.lat, s.lng); return Math.hypot(a - x, b - y) < 90; })) return;
+      const name = ((t['branch'] || t['name:ja'] || t.name || '').replace(/マクドナルド|McDonald'?s/gi, '').trim() || '名もなき城');
+      state.stores.push({ id: 'o' + el.id, name: /店$/.test(name) ? name : name + '店', lat, lng, osm: true }); add++;
+    });
+    save(); recompute(); draw(); say(add ? add + '城を新たに発見しました（位置は築城で修正できます）' : '新しい城は見つかりませんでした', 'good');
+  }).catch(() => say('この画面からは偵察できません。ホーム画面版で使うか、築城で手動追加してください', 'warn'));
+});
+
+async function scoutGoogle() {
+  try {
+    const { Place } = await google.maps.importLibrary('places');
+    const { places } = await Place.searchByText({
+      textQuery: 'マクドナルド', fields: ['id', 'displayName', 'location', 'businessStatus'],
+      locationRestriction: G.map.getBounds(), maxResultCount: 20, language: 'ja', region: 'jp'
+    });
+    let add = 0, fixed = 0, closed = 0;
+    (places || []).forEach(pl => {
+      const nm = (pl.displayName || '').replace(/マクドナルド|McDonald'?s/gi, '').trim();
+      if (!pl.location || !/マクドナルド|McDonald/i.test(pl.displayName || '')) return;
+      const lat = pl.location.lat(), lng = pl.location.lng(), [x, y] = toXY(lat, lng);
+      if (pl.businessStatus === 'CLOSED_PERMANENTLY') { closed++; return; }
+      let hit = state.stores.find(s => s.pid === pl.id);
+      if (!hit) hit = state.stores.find(s => { const [a, b] = toXY(s.lat, s.lng); return Math.hypot(a - x, b - y) < 150 && (!nm || s.name.replace(/店$/, '').includes(nm.replace(/店$/, '').slice(0, 2))); });
+      if (hit) {
+        if (Math.hypot(...(([a, b]) => [a - x, b - y])(toXY(hit.lat, hit.lng))) > 5) fixed++;
+        hit.lat = lat; hit.lng = lng; hit.pid = pl.id; return;
+      }
+      if (state.stores.some(s => { const [a, b] = toXY(s.lat, s.lng); return Math.hypot(a - x, b - y) < 40; })) return;
+      state.stores.push({ id: 'g' + pl.id.slice(-12), pid: pl.id, name: nm ? (/店$/.test(nm) ? nm : nm + '店') : '名もなき城', lat, lng }); add++;
+    });
+    save(); recompute(); draw();
+    say('偵察完了：新たに' + add + '城、位置補正' + fixed + '城' + (closed ? '、閉店' + closed + '件は除外' : ''), 'good');
+  } catch (e) {
+    say('偵察できませんでした。Google CloudでPlaces API (New) を有効にしてください', 'warn');
+  }
+}
+
+/* ---------- menu ---------- */
+let tab = 'war', resetStage = 0;
+$('#b-menu').addEventListener('click', () => { sfx('select'); resetStage = 0; $('#menu').hidden = false; renderMenu(); });
+$('#menu-x').addEventListener('click', () => { sfx('select'); $('#menu').hidden = true; });
+document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+  tab = b.dataset.tab; resetStage = 0; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x === b))); renderMenu();
+}));
+function renderMenu() {
+  const body = $('#menu-body'); const cur = rankOf(S.pt);
+  if (tab === 'war') {
+    const nextR = RANKS.find(r => r[0] > S.pt);
+    body.innerHTML =
+      '<div class="kv">' +
+        '<div><span>初陣</span><b style="font-size:15px">' + new Date(state.start).toLocaleDateString('ja-JP') + '</b></div>' +
+        '<div><span>総侵攻回数</span><b>' + S.tv + '</b></div>' +
+        '<div><span>制圧城</span><b>' + S.cc + ' / ' + state.stores.length + '</b></div>' +
+        '<div><span>総兵力</span><b>' + S.pt.toLocaleString() + '</b></div>' +
+        '<div><span>覇王の王都</span><b>' + S.lv5 + '</b></div>' +
+        '<div><span>治安悪化</span><b style="color:' + (S.fallen ? 'var(--warn)' : 'inherit') + '">' + S.fallen + '</b></div>' +
+      '</div>' +
+      '<div><h3>官位</h3><div class="ranks">' + RANKS.map(r => '<div class="' + (r === cur ? 'cur' : '') + '"><span>' + r[1] + '</span><span>' + r[0].toLocaleString() + ' pt〜</span></div>').join('') + '</div>' +
+      (nextR ? '<p class="note" style="margin-top:8px">次の官位【' + nextR[1] + '】まであと ' + (nextR[0] - S.pt).toLocaleString() + ' pt</p>' : '<p class="note" style="margin-top:8px">最高位に到達しました</p>') + '</div>' +
+      '<div><h3>城の位階</h3><div class="ranks">' + LEVELS.slice(1).map(l => '<div><span>Lv.' + l.lv + ' ' + l.t + '</span><span>' + l.need + '回 ・ 半径' + l.r.toLocaleString() + 'm</span></div>').join('') + '</div><p class="note" style="margin-top:8px">90日間訪れないと治安が悪化し、支配圏が地図から消えます。再訪すれば即座に回復します。Lv.5は永久不落です。</p></div>';
+  } else if (tab === 'month') {
+    const now = new Date(), months = [];
+    for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), n: 0, p: 0 }); }
+    const mix = { asa: 0, set: 0, gen: 0, cafe: 0 }; const cm = months[5]; const stores = new Set();
+    state.log.forEach(e => { const d = new Date(e.t); const mm = months.find(x => x.y === d.getFullYear() && x.m === d.getMonth()); if (mm) { mm.n++; mm.p += e.p; } if (d.getFullYear() === cm.y && d.getMonth() === cm.m) { mix[e.k] = (mix[e.k] || 0) + 1; stores.add(e.s); } });
+    const mx = Math.max(1, ...months.map(x => x.n)); const mixMax = Math.max(1, ...Object.values(mix));
+    const fav = [...stores].map(id => [id, state.log.filter(e => e.s === id && new Date(e.t).getMonth() === cm.m && new Date(e.t).getFullYear() === cm.y).length]).sort((a, b) => b[1] - a[1])[0];
+    body.innerHTML =
+      '<div><h3>出陣回数（直近6か月）</h3><div class="months">' + months.map(x => '<div class="mcol"><span>' + x.n + '</span><i style="height:' + Math.round(x.n / mx * 110) + 'px"></i></div>').join('') + '</div>' +
+      '<div class="mlabels">' + months.map(x => '<span>' + (x.m + 1) + '月</span>').join('') + '</div></div>' +
+      '<div class="kv"><div><span>今月の出陣</span><b>' + cm.n + '回</b></div><div><span>今月の獲得兵力</span><b>' + cm.p.toLocaleString() + '</b></div>' +
+      '<div><span>今月訪れた城</span><b>' + stores.size + '</b></div><div><span>今月の本拠地</span><b style="font-size:14px">' + (fav ? esc(byId(fav[0]).name) : '—') + '</b></div></div>' +
+      '<div><h3>今月の兵糧内訳</h3><div class="mix">' + Object.keys(MENUS).map(k => '<div class="mix-row"><span>' + MENUS[k].name.replace('新兵器', '').replace('主力部隊', '').replace('パトロール', '') + '</span><div class="bar"><i style="width:' + Math.round(mix[k] / mixMax * 100) + '%"></i></div><span>' + mix[k] + '回</span></div>').join('') + '</div></div>';
+  } else if (tab === 'list') {
+    const list = state.stores.slice().sort((a, b) => D[b.id].v - D[a.id].v || a.name.localeCompare(b.name, 'ja'));
+    body.innerHTML = '<div class="clist">' + list.map(s => {
+      const d = D[s.id];
+      const st = !d.v ? '未制圧' : d.L.lv >= 5 ? '永久不落' : d.fallen ? '治安悪化 ' + d.days + '日' : '残り' + (GUARD - d.days) + '日';
+      return '<button class="crow" data-id="' + esc(s.id) + '"><span class="lv' + (d.v ? '' : ' z') + '">' + (d.v ? 'Lv' + d.L.lv : '空') + '</span><span class="nm"><b>' + esc(s.name) + '</b><small>' + (d.v ? d.L.t + ' ・ 侵攻' + d.v + '回' : '兵糧を選んで制圧') + '</small></span><span class="ct' + (d.fallen || (d.v && d.L.lv < 5 && GUARD - d.days <= 14) ? ' warn' : '') + '">' + st + '</span></button>';
+    }).join('') + '</div>';
+    body.querySelectorAll('.crow').forEach(b => b.onclick = () => { $('#menu').hidden = true; select(b.dataset.id); });
+  } else if (tab === 'treasure') {
+    const got = TREASURES.filter(t => t.ok(S)).length;
+    body.innerHTML = '<p class="note">' + got + ' / 10 を所蔵</p><div class="treasures">' + TREASURES.map(t => t.ok(S)
+      ? '<div class="tr"><b>' + t.name + '</b><p>' + t.desc + '</p><div class="need">' + t.need + '</div></div>'
+      : '<div class="tr locked"><b>未発見の秘宝</b><p>条件を満たすと姿を現す。</p><div class="need">' + t.need + '</div></div>').join('') + '</div>';
+  } else if (tab === 'data') {
+    body.innerHTML =
+      '<div><h3>地図</h3><p class="note">現在の地図：<b style="color:var(--paper)">' + mapStatus + '</b>。GoogleマップのAPIキーはこの端末にだけ保存されます。</p><input type="text" id="gk" placeholder="AIza…" autocomplete="off" spellcheck="false" style="margin-top:8px;font-size:12px"><div class="row" style="margin-top:8px"><button class="primary" id="gk-save">保存して再読み込み</button>' + (lsGet(GKEY) ? '<button class="ghost" id="gk-del">キーを削除</button>' : '') + '</div></div>' +
+      '<div><h3>保存先</h3><p class="note">現在の保存先：<b style="color:var(--paper)">' + storeMode + '</b>。出陣は記録した瞬間に保存されます。</p></div>' +
+      '<div><h3>書き出し</h3><p class="note">別の端末やホーム画面版へ戦歴を引き継ぐときに使います。</p><textarea id="ex" readonly style="min-height:80px;font-size:11px"></textarea><div class="row" style="margin-top:8px"><button class="primary" id="ex-copy">コピー</button><span class="note" id="ex-msg"></span></div></div>' +
+      '<div><h3>読み込み</h3><p class="note">書き出した記録を貼り付けて読み込むと、今の戦歴は置き換わります。</p><textarea id="im" placeholder="ここに貼り付け" style="min-height:70px;font-size:11px"></textarea><div class="row" style="margin-top:8px"><button class="ghost" id="im-go">読み込む</button><span class="note" id="im-msg"></span></div></div>' +
+      '<div><h3>天下布武やり直し</h3><p class="note">すべての城と戦歴を初期状態に戻します。元に戻せません。</p><div class="row" style="margin-top:8px"><button class="ghost danger" id="rs">' + ['全データを消去する', '本当に消去しますか？', '最終確認：押すと消去'][resetStage] + '</button>' + (resetStage ? '<button class="ghost" id="rs-no">やめる</button>' : '') + '</div></div>';
+    $('#ex').value = JSON.stringify(state);
+    $('#gk').value = lsGet(GKEY) || '';
+    $('#gk-save').onclick = () => { const v = $('#gk').value.trim(); if (!v) return; lsSet(GKEY, v); location.reload(); };
+    const gd = $('#gk-del'); if (gd) gd.onclick = () => { try { localStorage.removeItem(GKEY); } catch (e) {} location.reload(); };
+    $('#ex-copy').onclick = () => {
+      const ta = $('#ex');
+      const fall = () => { ta.focus(); ta.select(); $('#ex-msg').textContent = '選択しました。長押しでコピーしてください'; };
+      try { navigator.clipboard.writeText(ta.value).then(() => { $('#ex-msg').textContent = 'コピーしました'; }, fall); } catch (e) { fall(); }
+    };
+    $('#im-go').onclick = () => {
+      try {
+        const o = JSON.parse($('#im').value);
+        if (!valid(o)) throw 0;
+        state = o; save(); recompute(); refreshHeader(); closeSheet(); fitAll(false);
+        $('#im-msg').textContent = '読み込みました（' + o.stores.length + '城・' + o.log.length + '戦）';
+      } catch (e) { $('#im-msg').textContent = '形式が正しくありません。書き出した文字列をそのまま貼り付けてください'; }
+    };
+    $('#rs').onclick = () => {
+      if (resetStage < 2) { resetStage++; renderMenu(); return; }
+      state = fresh(); save(); recompute(); refreshHeader(); closeSheet(); resetStage = 0; $('#menu').hidden = true; fitAll(true);
+      say('天下布武をやり直しました', 'good');
+    };
+    const no = $('#rs-no'); if (no) no.onclick = () => { resetStage = 0; renderMenu(); };
+  }
+}
+
+$('#b-fit').addEventListener('click', () => { sfx('select'); fitAll(true); });
+
+/* ---------- boot ---------- */
+recompute();
+new ResizeObserver(resize).observe($('#wrap'));
+resize(); fitAll(false); refreshHeader();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
+setTimeout(connectCloud, 0);
+loadGoogle();
+})();
 </script>
+
 </body>
 </html>
