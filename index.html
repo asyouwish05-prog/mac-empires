@@ -102,10 +102,40 @@ button:focus-visible, textarea:focus-visible, input:focus-visible { outline: 2px
 .ration:disabled { filter: grayscale(.8) brightness(.6); }
 .gate { font-size: 12px; padding: 8px 10px; border-radius: 6px; border: 1px dashed var(--line); color: var(--muted); }
 .gate.ok { border-style: solid; border-color: var(--jade); color: var(--jade); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 11px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--gold); color: var(--gold-hi); background: rgba(212,175,55,.1); }
+.ration .bz { color: var(--jade); }
+.day { display: flex; flex-direction: column; gap: 2px; }
+.day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; padding-bottom: 6px; border-bottom: 1px solid var(--gold); }
+.day-head b { font-family: var(--font-display); font-size: 15px; color: var(--gold-hi); }
+.day-head span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.day .chips { padding-top: 6px; }
+.hrow { display: grid; grid-template-columns: 3.2em minmax(0,1fr) auto auto; column-gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px dotted var(--line); }
+.hrow .tm { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hrow .hname { background: none; border: none; padding: 0; text-align: left; font-size: 14px; color: var(--paper); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.hrow .hp { font-family: var(--font-display); font-weight: 800; color: var(--gold-hi); font-variant-numeric: tabular-nums; }
+.hrow .hsub { grid-column: 2 / 4; font-size: 11px; color: var(--muted); line-height: 1.5; }
+.hrow .hsub i { font-style: normal; color: var(--jade); }
+.hdel { background: none; border: 1px solid var(--line); color: var(--muted); border-radius: 4px; font-size: 11px; padding: 3px 7px; grid-row: 1 / 3; grid-column: 4; }
+.hdel.arm { border-color: var(--crimson-hi); color: #ffb3a8; }
+.evform { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+.evform label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); letter-spacing: .06em; min-width: 0; }
+.evform .full { grid-column: 1 / -1; }
+.evc { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 6px; background: var(--lacquer); }
+.evc.live { border-color: var(--gold); }
+.evc.past { opacity: .72; }
+.evc-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.evc-head b { font-family: var(--font-display); font-size: 16px; color: var(--paper); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pill { flex-shrink: 0; font-size: 10px; letter-spacing: .1em; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.pill.live { background: var(--crimson); border-color: var(--gold); color: var(--gold-hi); }
+.pill.up { border-color: var(--jade); color: var(--jade); }
+.evc-sub, .evc-stats { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.evc-stats b { color: var(--paper); font-weight: 500; }
+.evlist { display: flex; flex-direction: column; gap: 10px; }
 .undo { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 8px 10px; border: 1px dashed var(--line); border-radius: 6px; }
 .linkbtn { background: none; border: none; color: var(--gold-hi); text-decoration: underline; font-size: 12px; padding: 4px; }
 .sect-label { font-size: 10px; letter-spacing: .2em; color: var(--muted); }
-textarea, input[type=text] { width: 100%; background: var(--ink); color: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 14px; -webkit-user-select: text; user-select: text; }
+textarea, input[type=text], input[type=date], input[type=number], select { width: 100%; background: var(--ink); color: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: inherit; font-size: 14px; -webkit-user-select: text; user-select: text; }
 textarea { min-height: 56px; resize: vertical; }
 .history { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .history div { display: flex; justify-content: space-between; gap: 8px; }
@@ -205,6 +235,8 @@ h3 { font-family: var(--font-display); font-weight: 800; font-size: 16px; color:
       <div class="menu-head"><h2>天下統一・軍略記録</h2><button class="x" id="menu-x" aria-label="閉じる">×</button></div>
       <div class="tabs" role="tablist">
         <button class="tab" role="tab" data-tab="war" aria-selected="true">戦況</button>
+        <button class="tab" role="tab" data-tab="hist" aria-selected="false">戦歴</button>
+        <button class="tab" role="tab" data-tab="event" aria-selected="false">イベント</button>
         <button class="tab" role="tab" data-tab="month" aria-selected="false">月報</button>
         <button class="tab" role="tab" data-tab="list" aria-selected="false">城一覧</button>
         <button class="tab" role="tab" data-tab="treasure" aria-selected="false">十大秘宝</button>
@@ -267,7 +299,8 @@ const DEF_STORES = [
 
 /* ---------- state & storage ---------- */
 const KEY = 'mce_v2';
-const fresh = () => ({ v: 2, start: Date.now(), updated: 0, stores: DEF_STORES.map(s => ({ ...s })), log: [] });
+const fresh = () => ({ v: 2, start: Date.now(), updated: 0, stores: DEF_STORES.map(s => ({ ...s })), log: [], events: [] });
+const norm = o => { if (!Array.isArray(o.events)) o.events = []; return o; };
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function valid(o) { return o && Array.isArray(o.stores) && Array.isArray(o.log); }
@@ -289,7 +322,7 @@ function loadLocal() {
   } catch (e) {}
   return null;
 }
-let state = loadLocal() || fresh();
+let state = norm(loadLocal() || fresh());
 let dbRef = null, writing = Promise.resolve(), saveTimer = null, storeMode = 'この端末';
 
 function save() {
@@ -320,7 +353,7 @@ async function connectCloud() {
       let remote = null;
       try { remote = JSON.parse(snap.data().json); } catch (e) {}
       if (valid(remote) && (remote.updated || 0) >= (state.updated || 0)) {
-        state = remote; lsSet(KEY, JSON.stringify(state)); recompute(); draw(); refreshHeader();
+        state = norm(remote); lsSet(KEY, JSON.stringify(state)); recompute(); draw(); refreshHeader();
       } else if (state.updated) save();
     } else if (state.updated) save();
     storeMode = 'クラウド（あなた専用）';
@@ -328,6 +361,7 @@ async function connectCloud() {
 }
 
 /* ---------- derived ---------- */
+const totalOf = e => e.p + (e.bx || 0);
 let D = {}, S = null;
 function recompute() {
   D = {};
@@ -336,8 +370,8 @@ function recompute() {
   let pt = 0, tv = 0;
   state.log.forEach(e => {
     const d = D[e.s]; if (!d) return;
-    d.v++; d.p += e.p; if (e.t > d.last) d.last = e.t;
-    pt += e.p; tv++; if (k[e.k] != null) k[e.k]++;
+    d.v++; d.p += totalOf(e); if (e.t > d.last) d.last = e.t;
+    pt += totalOf(e); tv++; if (k[e.k] != null) k[e.k]++;
   });
   let cc = 0, lv5 = 0, fallen = 0, soon = 0;
   state.stores.forEach(s => {
@@ -752,14 +786,47 @@ function idleTicker() {
   if (S.fallen) return say(S.fallen + '城で治安が悪化しています。城一覧から確認できます', '');
   if (S.soon) return say(S.soon + '城の治安維持期限が14日以内に迫っています', '');
   if (!S.tv) return say('店舗の30m以内で城をタップし、注文した兵糧を選ぶと制圧できます', '');
-  const today = state.log.filter(e => new Date(e.t).toDateString() === new Date().toDateString()).length;
-  say(today ? '本日の出陣 ' + today + '回。総侵攻 ' + S.tv + '回' : '本日はまだ出陣していません。総侵攻 ' + S.tv + '回', '');
+  const dk = dayKey(Date.now()), ae = activeEvents(dk)[0];
+  const todayStores = new Set(state.log.filter(e => dayKey(e.t) === dk).map(e => e.s)).size;
+  if (todayStores) return say('本日' + todayStores + '城を制圧。次の城で連戦ボーナス +' + COMBO(todayStores + 1) + (ae ? ' ・ 開催中：' + ae.name : ''), '');
+  if (ae) return say('開催中：' + ae.name + '（' + (EV_MODES[ae.mode] || [''])[0] + '、' + fmtDK(ae.to) + 'まで）', '');
+  const st = streakBefore(dk);
+  say(st >= 2 ? '連日出陣 ' + st + '日継続中。今日出陣すると' + (st + 1) + '日目のボーナス' : '本日はまだ出陣していません。総侵攻 ' + S.tv + '回', '');
 }
 function refreshHeader() {
   $('#h-cc').textContent = S.cc;
   $('#h-pt').textContent = S.pt.toLocaleString();
   $('#rank').textContent = rankOf(S.pt)[1];
   idleTicker();
+}
+
+/* ---------- bonuses & events ---------- */
+const dayKey = t => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+const fmtDK = dk => +dk.slice(5, 7) + '/' + +dk.slice(8, 10);
+const COMBO = n => n >= 4 ? 150 : n === 3 ? 100 : 50;
+const EV_MODES = { x15: ['兵力×1.5', b => Math.round(b * 0.5)], x2: ['兵力×2', b => b], x3: ['兵力×3', b => b * 2], p100: ['毎回+100', () => 100] };
+const activeEvents = dk => state.events.filter(ev => ev.from <= dk && dk <= ev.to);
+function streakBefore(dk) {
+  const days = new Set(state.log.map(e => dayKey(e.t))), d = new Date(dk + 'T12:00:00'); let n = 0;
+  for (;;) { d.setDate(d.getDate() - 1); if (days.has(dayKey(d))) n++; else break; }
+  return n;
+}
+function maxStreak() {
+  const days = [...new Set(state.log.map(e => dayKey(e.t)))].sort(); let best = 0, run = 0, prev = null;
+  days.forEach(dk => { const t = new Date(dk + 'T12:00:00').getTime(); run = prev && Math.round((t - prev) / DAY) === 1 ? run + 1 : 1; best = Math.max(best, run); prev = t; });
+  return best;
+}
+function bonusFor(s, k) {
+  const dk = dayKey(Date.now()), base = MENUS[k].pt, out = [];
+  const todayLog = state.log.filter(e => dayKey(e.t) === dk), seen = new Set(todayLog.map(e => e.s));
+  if (seen.size && !seen.has(s.id)) { const n = seen.size + 1; out.push(['連戦ボーナス（本日' + n + '城目）', COMBO(n)]); }
+  if (!todayLog.length) { const st = streakBefore(dk) + 1; if (st >= 3) out.push(['連日出陣 ' + st + '日目', st >= 5 ? 100 : 50]); }
+  activeEvents(dk).forEach(ev => { if (ev.menu === 'all' || ev.menu === k) { const md = EV_MODES[ev.mode], p = md ? md[1](base) : 0; if (p > 0) out.push([ev.name, p]); } });
+  return out;
+}
+function eventStats(ev) {
+  const L = state.log.filter(e => { const dk = dayKey(e.t); return ev.from <= dk && dk <= ev.to; });
+  return { n: L.length, p: L.reduce((a, e) => a + totalOf(e), 0), st: new Set(L.map(e => e.s)).size };
 }
 
 /* ---------- sheet ---------- */
@@ -783,6 +850,7 @@ function renderSheet() {
   const morning = hr >= 5 && hr < 10.5;
   const hist = state.log.filter(e => e.s === s.id).slice(-4).reverse();
   const gt = gate(s);
+  const chips = [...new Set(Object.keys(MENUS).flatMap(k => bonusFor(s, k).map(b => b[0])))];
   const today = state.log.some(e => e.s === s.id && new Date(e.t).toDateString() === new Date().toDateString());
   sheet.innerHTML =
     '<div class="sheet-head">' +
@@ -795,14 +863,15 @@ function renderSheet() {
     guard +
     '<div class="sect-label">兵糧を選んで出陣' + (today ? ' ・ 本日は出陣済み' : '') + '</div>' +
     '<div class="gate' + (gt.ok ? ' ok' : '') + '" id="sh-gate">' + esc(gt.msg) + '</div>' +
+    (chips.length ? '<div class="chips">' + chips.map(c => '<span class="chip">' + esc(c) + '</span>').join('') + '</div>' : '') +
     '<div class="rations">' + Object.keys(MENUS).map(k => {
-      const m = MENUS[k];
-      return '<button class="ration' + (k === 'asa' && morning ? ' hot' : '') + '" data-k="' + k + '"' + (cool || !gt.ok ? ' disabled' : '') + '><span class="k">' + m.k + '</span><span>' + m.name + '<br><em>+' + m.pt + '</em></span></button>';
+      const m = MENUS[k], bz = bonusFor(s, k).reduce((a, b) => a + b[1], 0);
+      return '<button class="ration' + (k === 'asa' && morning ? ' hot' : '') + '" data-k="' + k + '"' + (cool || !gt.ok ? ' disabled' : '') + '><span class="k">' + m.k + '</span><span>' + m.name + '<br><em>+' + m.pt + (bz ? ' <b class="bz">+' + bz + '</b>' : '') + '</em></span></button>';
     }).join('') + '</div>' +
     (Date.now() < undoUntil ? '<div class="undo"><span>直前の出陣を記録しました</span><button class="linkbtn" id="sh-undo">取り消す</button></div>' : '') +
     '<div class="sect-label">軍議メモ</div>' +
     '<textarea id="sh-memo" placeholder="席の雰囲気、混む時間帯、限定品の在庫など">' + esc(s.memo || '') + '</textarea>' +
-    (hist.length ? '<div class="sect-label">戦歴</div><div class="history">' + hist.map(e => '<div><span>' + fmtD(e.t) + '</span><span>' + (MENUS[e.k] ? MENUS[e.k].name : '') + ' +' + e.p + '</span></div>').join('') + '</div>' : '') +
+    (hist.length ? '<div class="sect-label">戦歴</div><div class="history">' + hist.map(e => '<div><span>' + fmtD(e.t) + '</span><span>' + (MENUS[e.k] ? MENUS[e.k].name : '') + ' +' + totalOf(e) + '</span></div>').join('') + '</div>' : '') +
     '<div class="sheet-foot"><button class="ghost" id="sh-rename">城の名を改める</button><button class="ghost" id="sh-move">位置を直す</button><button class="ghost danger" id="sh-remove">' + (removeArm ? 'もう一度押すと城と戦歴を削除' : '城を地図から外す') + '</button></div>';
   sheet.hidden = false;
   $('#sh-x').onclick = () => { sfx('select'); closeSheet(); };
@@ -831,7 +900,10 @@ function invade(k) {
   cool = true;
   const m = MENUS[k], before = D[s.id].v, oldLv = D[s.id].L.lv, wasFallen = D[s.id].fallen;
   const oldRank = rankOf(S.pt)[1], oldT = snapshotUnlocked();
-  state.log.push({ s: s.id, t: Date.now(), p: m.pt, k: k });
+  const bn = bonusFor(s, k), bx = bn.reduce((a, b) => a + b[1], 0);
+  const goals = activeEvents(dayKey(Date.now())).filter(ev => ev.goal).map(ev => [ev, eventStats(ev).st]);
+  const entry = { s: s.id, t: Date.now(), p: m.pt, k: k }; if (bx) { entry.bx = bx; entry.bn = bn; }
+  state.log.push(entry);
   save(); recompute();
   const d = D[s.id];
   const q = [];
@@ -839,6 +911,8 @@ function invade(k) {
   else if (d.L.lv > oldLv) q.push(['城郭進化', '【' + d.L.t + '】へ', 'levelup']);
   else if (wasFallen) q.push(['奪還', '治安回復！', 'levelup']);
   else q.push([m.name, '+' + m.pt + ' 内政強化！', 'attack']);
+  if (bx) q.push(['ボーナス +' + bx, bn.map(b => b[0]).join('・'), 'attack']);
+  goals.forEach(([ev, st]) => { if (st < ev.goal && eventStats(ev).st >= ev.goal) q.push(['イベント達成', ev.name, 'treasure']); });
   const newRank = rankOf(S.pt)[1];
   if (newRank !== oldRank) q.push(['昇進', newRank, 'levelup']);
   snapshotUnlocked().forEach((ok, i) => { if (ok && !oldT[i]) q.push(['秘宝獲得', TREASURES[i].name, 'treasure']); });
@@ -1056,11 +1130,11 @@ async function scoutGoogle() {
 }
 
 /* ---------- menu ---------- */
-let tab = 'war', resetStage = 0;
+let tab = 'war', resetStage = 0, histDays = 30, delArm = -1, evDelArm = null;
 $('#b-menu').addEventListener('click', () => { sfx('select'); resetStage = 0; $('#menu').hidden = false; renderMenu(); });
 $('#menu-x').addEventListener('click', () => { sfx('select'); $('#menu').hidden = true; });
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
-  tab = b.dataset.tab; resetStage = 0; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x === b))); renderMenu();
+  tab = b.dataset.tab; resetStage = 0; delArm = -1; evDelArm = null; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x === b))); renderMenu();
 }));
 function renderMenu() {
   const body = $('#menu-body'); const cur = rankOf(S.pt);
@@ -1078,11 +1152,82 @@ function renderMenu() {
       '<div><h3>官位</h3><div class="ranks">' + RANKS.map(r => '<div class="' + (r === cur ? 'cur' : '') + '"><span>' + r[1] + '</span><span>' + r[0].toLocaleString() + ' pt〜</span></div>').join('') + '</div>' +
       (nextR ? '<p class="note" style="margin-top:8px">次の官位【' + nextR[1] + '】まであと ' + (nextR[0] - S.pt).toLocaleString() + ' pt</p>' : '<p class="note" style="margin-top:8px">最高位に到達しました</p>') + '</div>' +
       '<div><h3>城の位階</h3><div class="ranks">' + LEVELS.slice(1).map(l => '<div><span>Lv.' + l.lv + ' ' + l.t + '</span><span>' + l.need + '回 ・ 半径' + l.r.toLocaleString() + 'm</span></div>').join('') + '</div><p class="note" style="margin-top:8px">90日間訪れないと治安が悪化し、支配圏が地図から消えます。再訪すれば即座に回復します。Lv.5は永久不落です。</p></div>';
+  } else if (tab === 'hist') {
+    const groups = new Map();
+    state.log.forEach((e, i) => { const dk = dayKey(e.t); if (!groups.has(dk)) groups.set(dk, []); groups.get(dk).push([e, i]); });
+    const keys = [...groups.keys()].sort().reverse(), shown = keys.slice(0, histDays);
+    if (!keys.length) { body.innerHTML = '<div class="empty">まだ出陣の記録がありません。店舗で城を選んで兵糧を選ぶと、ここに日ごとの戦歴が残ります。</div>'; return; }
+    const bonusSum = state.log.reduce((a, e) => a + (e.bx || 0), 0);
+    body.innerHTML =
+      '<div class="kv"><div><span>出陣した日</span><b>' + keys.length + '日</b></div><div><span>最長連日出陣</span><b>' + maxStreak() + '日</b></div>' +
+      '<div><span>1日の最多制圧</span><b>' + Math.max(...keys.map(k => new Set(groups.get(k).map(([e]) => e.s)).size)) + '城</b></div><div><span>獲得ボーナス</span><b>' + bonusSum.toLocaleString() + '</b></div></div>' +
+      shown.map(dk => {
+        const rows = groups.get(dk).slice().reverse(), pt = rows.reduce((a, [e]) => a + totalOf(e), 0), st = new Set(rows.map(([e]) => e.s)).size;
+        const d = new Date(dk + 'T12:00:00'), evs = activeEvents(dk);
+        const chips = (st >= 2 ? ['' + st + '城連戦'] : []).concat(evs.map(ev => ev.name));
+        return '<section class="day"><div class="day-head"><b>' + d.getFullYear() + '年' + (d.getMonth() + 1) + '月' + d.getDate() + '日（' + '日月火水木金土'[d.getDay()] + '）</b><span>' + rows.length + '戦 ・ ' + st + '城 ・ ' + pt.toLocaleString() + 'pt</span></div>' +
+          (chips.length ? '<div class="chips">' + chips.map(c => '<span class="chip">' + esc(c) + '</span>').join('') + '</div>' : '') +
+          rows.map(([e, i]) => {
+            const st0 = byId(e.s), tm = new Date(e.t);
+            return '<div class="hrow"><span class="tm">' + String(tm.getHours()).padStart(2, '0') + ':' + String(tm.getMinutes()).padStart(2, '0') + '</span>' +
+              '<button class="hname" data-s="' + esc(e.s) + '"' + (st0 ? '' : ' disabled') + '>' + esc(st0 ? st0.name : '（外した城）') + '</button>' +
+              '<span class="hp">+' + totalOf(e) + '</span>' +
+              '<button class="hdel' + (delArm === i ? ' arm' : '') + '" data-i="' + i + '" aria-label="この記録を削除">' + (delArm === i ? '削除する' : '×') + '</button>' +
+              '<div class="hsub">' + (MENUS[e.k] ? MENUS[e.k].name : '') + ' +' + e.p + (e.bn ? e.bn.map(b => ' ・ <i>' + esc(b[0]) + ' +' + b[1] + '</i>').join('') : '') + '</div></div>';
+          }).join('') + '</section>';
+      }).join('') +
+      (keys.length > histDays ? '<button class="ghost" id="h-more">さらに30日分を表示</button>' : '');
+    body.querySelectorAll('.hname').forEach(b => b.onclick = () => { $('#menu').hidden = true; select(b.dataset.s); });
+    body.querySelectorAll('.hdel').forEach(b => b.onclick = () => {
+      const i = +b.dataset.i;
+      if (delArm !== i) { delArm = i; renderMenu(); return; }
+      state.log.splice(i, 1); delArm = -1; undoUntil = 0; save(); recompute(); refreshHeader(); draw(); renderMenu();
+    });
+    const more = $('#h-more'); if (more) more.onclick = () => { histDays += 30; renderMenu(); };
+  } else if (tab === 'event') {
+    const dk = dayKey(Date.now()), wk = dayKey(Date.now() + 6 * DAY);
+    const status = ev => dk < ev.from ? ['予定', 'up'] : dk > ev.to ? ['終了', 'past'] : ['開催中', 'live'];
+    const order = { live: 0, up: 1, past: 2 };
+    const list = state.events.slice().sort((a, b) => order[status(a)[1]] - order[status(b)[1]] || (status(a)[1] === 'past' ? b.to.localeCompare(a.to) : a.from.localeCompare(b.from)));
+    body.innerHTML =
+      '<div><h3>イベント一覧</h3><div class="evlist">' + (list.length ? list.map(ev => {
+        const [lb, cls] = status(ev), st = eventStats(ev), md = EV_MODES[ev.mode];
+        const prog = ev.goal ? Math.min(100, Math.round(st.st / ev.goal * 100)) : 0;
+        return '<div class="evc ' + cls + '"><div class="evc-head"><span class="pill ' + cls + '">' + lb + '</span><b>' + esc(ev.name) + '</b></div>' +
+          '<div class="evc-sub">' + fmtDK(ev.from) + '〜' + fmtDK(ev.to) + ' ・ ' + (md ? md[0] : '') + ' ・ ' + (ev.menu === 'all' ? '全兵糧' : MENUS[ev.menu].name + 'のみ') + '</div>' +
+          '<div class="evc-stats">期間中 <b>' + st.n + '戦</b> ・ <b>' + st.st + '城</b> ・ <b>' + st.p.toLocaleString() + 'pt</b></div>' +
+          (ev.goal ? '<div class="meter"><div class="meter-row"><span>目標 ' + ev.goal + '城を制圧</span><span>' + (st.st >= ev.goal ? '達成！' : st.st + ' / ' + ev.goal) + '</span></div><div class="bar"><i style="width:' + prog + '%"></i></div></div>' : '') +
+          '<div class="row"><button class="linkbtn" data-evdel="' + esc(ev.id) + '">' + (evDelArm === ev.id ? 'もう一度押すと削除' : 'イベントを削除') + '</button></div></div>';
+      }).join('') : '<div class="empty">まだイベントがありません。新作バーガーの発売週や連休など、期間を決めて兵力ボーナスを設定できます。</div>') + '</div></div>' +
+      '<div><h3>イベントを作る</h3><form class="evform" id="evf">' +
+        '<label class="full">イベント名<input type="text" id="ev-name" maxlength="24" placeholder="例：月見バーガー合戦"></label>' +
+        '<label>開始日<input type="date" id="ev-from" value="' + dk + '"></label>' +
+        '<label>終了日<input type="date" id="ev-to" value="' + wk + '"></label>' +
+        '<label>ボーナス<select id="ev-mode">' + Object.keys(EV_MODES).map(k => '<option value="' + k + '"' + (k === 'x2' ? ' selected' : '') + '>' + EV_MODES[k][0] + '</option>').join('') + '</select></label>' +
+        '<label>対象の兵糧<select id="ev-menu"><option value="all">全兵糧</option>' + Object.keys(MENUS).map(k => '<option value="' + k + '">' + MENUS[k].name + '</option>').join('') + '</select></label>' +
+        '<label class="full">目標の城数（任意）<input type="number" id="ev-goal" min="1" max="99" inputmode="numeric" placeholder="例：5　期間中に制圧した城の数"></label>' +
+        '<div class="row full"><button class="primary" type="submit">イベントを作成</button><span class="note" id="ev-msg"></span></div>' +
+      '</form></div>';
+    $('#evf').onsubmit = e => {
+      e.preventDefault();
+      const name = $('#ev-name').value.trim(), from = $('#ev-from').value, to = $('#ev-to').value, goal = parseInt($('#ev-goal').value, 10);
+      const msg = $('#ev-msg');
+      if (!name) { msg.textContent = 'イベント名を入力してください'; $('#ev-name').focus(); return; }
+      if (!from || !to || from > to) { msg.textContent = '終了日は開始日と同じか後の日にしてください'; return; }
+      state.events.push({ id: 'e' + Date.now().toString(36), name, from, to, mode: $('#ev-mode').value, menu: $('#ev-menu').value, goal: goal > 0 ? goal : 0 });
+      save(); sfx('levelup'); renderMenu(); idleTicker(); if (selected) renderSheet();
+      say('イベント「' + name + '」を作成しました', 'good');
+    };
+    body.querySelectorAll('[data-evdel]').forEach(b => b.onclick = () => {
+      const id = b.dataset.evdel;
+      if (evDelArm !== id) { evDelArm = id; renderMenu(); return; }
+      state.events = state.events.filter(ev => ev.id !== id); evDelArm = null; save(); renderMenu(); idleTicker(); if (selected) renderSheet();
+    });
   } else if (tab === 'month') {
     const now = new Date(), months = [];
     for (let i = 5; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push({ y: d.getFullYear(), m: d.getMonth(), n: 0, p: 0 }); }
     const mix = { asa: 0, set: 0, gen: 0, cafe: 0 }; const cm = months[5]; const stores = new Set();
-    state.log.forEach(e => { const d = new Date(e.t); const mm = months.find(x => x.y === d.getFullYear() && x.m === d.getMonth()); if (mm) { mm.n++; mm.p += e.p; } if (d.getFullYear() === cm.y && d.getMonth() === cm.m) { mix[e.k] = (mix[e.k] || 0) + 1; stores.add(e.s); } });
+    state.log.forEach(e => { const d = new Date(e.t); const mm = months.find(x => x.y === d.getFullYear() && x.m === d.getMonth()); if (mm) { mm.n++; mm.p += totalOf(e); } if (d.getFullYear() === cm.y && d.getMonth() === cm.m) { mix[e.k] = (mix[e.k] || 0) + 1; stores.add(e.s); } });
     const mx = Math.max(1, ...months.map(x => x.n)); const mixMax = Math.max(1, ...Object.values(mix));
     const fav = [...stores].map(id => [id, state.log.filter(e => e.s === id && new Date(e.t).getMonth() === cm.m && new Date(e.t).getFullYear() === cm.y).length]).sort((a, b) => b[1] - a[1])[0];
     body.innerHTML =
@@ -1124,7 +1269,7 @@ function renderMenu() {
       try {
         const o = JSON.parse($('#im').value);
         if (!valid(o)) throw 0;
-        state = o; save(); recompute(); refreshHeader(); closeSheet(); fitAll(false);
+        state = norm(o); save(); recompute(); refreshHeader(); closeSheet(); fitAll(false);
         $('#im-msg').textContent = '読み込みました（' + o.stores.length + '城・' + o.log.length + '戦）';
       } catch (e) { $('#im-msg').textContent = '形式が正しくありません。書き出した文字列をそのまま貼り付けてください'; }
     };
