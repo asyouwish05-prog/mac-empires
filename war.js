@@ -2,7 +2,7 @@
 // GitHub Pages 版でのみ読み込まれる。本体とは window.EMP でつながる。
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
+import { getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
 const E = window.EMP;
 if (!E) throw new Error('EMPIRES core not found');
@@ -26,6 +26,7 @@ const ls = { get(k) { try { return localStorage.getItem(k); } catch (e) { return
 
 let user = null, member = null, members = {}, players = {}, conf = {}, unsubs = [];
 let phase = 'loading', joinMsg = '', busy = false, owners = {}, prevOwn = null, news = [];
+let taken = {}, flagsLoaded = false;
 let lastSig = '', pushTimer = null, kickArm = null, leaveArm = false, loaded = { members: false, players: false };
 
 /* ---------- style ---------- */
@@ -162,10 +163,26 @@ function push() {
   }, 1200);
 }
 
+/* ---------- banner colours (flags/{color} = { uid }) ---------- */
+async function loadFlags() {
+  try { const snap = await getDocs(collection(db, 'flags')); taken = {}; snap.forEach(d => { taken[d.id] = d.data().uid; }); } catch (e) { taken = {}; }
+  flagsLoaded = true;
+}
+async function claimFlag(color) {
+  const ref = doc(db, 'flags', color);
+  const cur = await getDoc(ref);
+  if (cur.exists()) { if (cur.data().uid === user.uid) return true; return false; }
+  await setDoc(ref, { uid: user.uid });
+  return true;
+}
+async function releaseFlag(color, uid) {
+  try { const ref = doc(db, 'flags', color), cur = await getDoc(ref); if (cur.exists() && cur.data().uid === uid) await deleteDoc(ref); } catch (e) {}
+}
+
 /* ---------- lifecycle ---------- */
 function stop() { unsubs.forEach(u => { try { u(); } catch (e) {} }); unsubs = []; loaded = { members: false, players: false }; }
 function kicked(msg) {
-  stop(); member = null; players = {}; members = {}; owners = {}; phase = 'join'; joinMsg = msg || '';
+  stop(); flagsLoaded = false; if (user) loadFlags().then(() => { if (E.menuOpen() && E.tab === 'kassen') render(); }); member = null; players = {}; members = {}; owners = {}; phase = 'join'; joinMsg = msg || '';
   E.draw(); if (E.selected) E.renderSheet(); if (E.menuOpen() && E.tab === 'kassen') render();
 }
 function start() {
@@ -191,6 +208,7 @@ function start() {
     if (E.menuOpen() && E.tab === 'kassen') render();
   }, () => {}));
   push();
+  claimFlag(member.color).catch(() => {});
   E.say('合戦に参陣中：' + member.name + '軍', 'good');
 }
 
@@ -200,8 +218,8 @@ onAuthStateChanged(auth, async u => {
   try {
     const m = await getDoc(doc(db, 'members', u.uid));
     if (m.exists()) { member = m.data(); start(); }
-    else { member = null; phase = 'join'; }
-  } catch (e) { member = null; phase = 'join'; }
+    else { member = null; phase = 'join'; await loadFlags(); }
+  } catch (e) { member = null; phase = 'join'; await loadFlags(); }
   if (E.menuOpen() && E.tab === 'kassen') render();
 });
 getRedirectResult(auth).catch(() => {});
@@ -220,6 +238,13 @@ async function join(name, color, code) {
   busy = true; joinMsg = '参戦の手続き中…'; render();
   try {
     await setDoc(doc(db, 'members', user.uid), { code, name, color, joinedAt: Date.now() });
+    let ok = false;
+    try { ok = await claimFlag(color); } catch (e) { ok = false; }
+    if (!ok) {
+      await deleteDoc(doc(db, 'members', user.uid)).catch(() => {});
+      busy = false; joinMsg = 'その色は先に選ばれました。別の色を選んでください';
+      await loadFlags(); render(); return;
+    }
     const c = await getDoc(doc(db, 'config', 'app')).catch(() => null);
     if (c && !c.exists()) await setDoc(doc(db, 'config', 'app'), { owner: user.uid }).catch(() => {});
     member = { code, name, color, joinedAt: Date.now() };
@@ -291,16 +316,17 @@ function render() {
     return;
   }
   if (phase === 'join' || !member) {
-    const taken = new Set();
+    const free = Object.keys(COLORS).filter(k => !taken[k] || taken[k] === user.uid);
+    let color = free[0] || null;
     body.innerHTML = '<div><h3>参陣の手続き</h3><p class="note">' + esc(user.email || '') + ' でログイン中</p></div>' +
       '<form class="wform" id="w-join">' +
         '<label>武将名（仲間に表示されます）<input type="text" id="w-name" maxlength="12" placeholder="例：マック信長"></label>' +
-        '<label>軍旗の色</label><div class="wcolors" id="w-colors">' + Object.keys(COLORS).map((k, i) => '<button type="button" class="wcolor" data-c="' + k + '" aria-pressed="' + (i === 0) + '"><i class="wdot" style="background:' + COLORS[k][1] + '"></i>' + COLORS[k][0] + '</button>').join('') + '</div>' +
+        '<label>軍旗の色</label><div class="wcolors" id="w-colors">' + Object.keys(COLORS).map(k => { const used = taken[k] && taken[k] !== user.uid; return '<button type="button" class="wcolor" data-c="' + k + '" aria-pressed="' + (k === color) + '"' + (used ? ' disabled' : '') + '><i class="wdot" style="background:' + COLORS[k][1] + '"></i>' + COLORS[k][0] + (used ? '（使用中）' : '') + '</button>'; }).join('') + '</div>' +
+        (!flagsLoaded ? '<p class="note">使用中の色を確認しています…</p>' : !color ? '<p class="note" style="color:var(--warn)">5色すべて使用中です。総大将に相談してください</p>' : '') +
         '<label>合言葉<input type="text" id="w-code" autocomplete="off" placeholder="仲間から聞いた合言葉"></label>' +
         '<div class="row"><button class="primary" type="submit"' + (busy ? ' disabled' : '') + '>参戦する</button><button class="ghost" type="button" id="w-out">ログアウト</button></div>' +
         (joinMsg ? '<p class="note" style="color:var(--warn)">' + esc(joinMsg) + '</p>' : '') +
       '</form>';
-    let color = 'beni';
     body.querySelectorAll('.wcolor').forEach(b => b.onclick = () => { color = b.dataset.c; body.querySelectorAll('.wcolor').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
     body.querySelector('#w-out').onclick = () => signOut(auth);
     body.querySelector('#w-join').onsubmit = e => {
@@ -308,6 +334,7 @@ function render() {
       const name = body.querySelector('#w-name').value.trim(), code = body.querySelector('#w-code').value.trim();
       if (!name) { joinMsg = '武将名を入力してください'; render(); return; }
       if (!code) { joinMsg = '合言葉を入力してください'; render(); return; }
+      if (!color) { joinMsg = '軍旗の色を選んでください'; render(); return; }
       join(name, color, code);
     };
     return;
@@ -348,7 +375,13 @@ function render() {
   body.querySelector('#w-edit').onsubmit = async e => {
     e.preventDefault();
     const name = body.querySelector('#w-name').value.trim(); if (!name) return;
-    try { await setDoc(doc(db, 'members', me), { code: member.code, name, color, joinedAt: member.joinedAt }); lastSig = ''; push(); body.querySelector('#w-edit-msg').textContent = '保存しました'; }
+    const msg = body.querySelector('#w-edit-msg');
+    if (color !== member.color) {
+      let ok = false; try { ok = await claimFlag(color); } catch (err) { ok = false; }
+      if (!ok) { msg.textContent = 'その色は使用中です'; return; }
+    }
+    const oldColor = member.color;
+    try { await setDoc(doc(db, 'members', me), { code: member.code, name, color, joinedAt: member.joinedAt }); if (oldColor !== color) releaseFlag(oldColor, me); lastSig = ''; push(); body.querySelector('#w-edit-msg').textContent = '保存しました'; }
     catch (err) { body.querySelector('#w-edit-msg').textContent = '保存できませんでした'; }
   };
   const kb = body.querySelector('#w-key');
@@ -357,13 +390,13 @@ function render() {
     const u = b.dataset.kick;
     if (kickArm !== u) { kickArm = u; render(); return; }
     kickArm = null;
-    try { await setDoc(doc(db, 'bans', u), { t: Date.now() }); await deleteDoc(doc(db, 'players', u)); await deleteDoc(doc(db, 'members', u)); E.say('追放しました', 'good'); }
+    try { await setDoc(doc(db, 'bans', u), { t: Date.now() }); if (members[u]) await releaseFlag(members[u].color, u); await deleteDoc(doc(db, 'players', u)); await deleteDoc(doc(db, 'members', u)); E.say('追放しました', 'good'); }
     catch (e) { E.say('追放できませんでした', 'warn'); }
   });
   body.querySelector('#w-leave').onclick = async () => {
     if (!leaveArm) { leaveArm = true; render(); return; }
     leaveArm = false;
-    try { await deleteDoc(doc(db, 'players', me)); await deleteDoc(doc(db, 'members', me)); } catch (e) {}
+    try { await releaseFlag(member.color, me); await deleteDoc(doc(db, 'players', me)); await deleteDoc(doc(db, 'members', me)); } catch (e) {}
     kicked('合戦から退きました');
   };
   body.querySelector('#w-out').onclick = () => { stop(); member = null; signOut(auth); };
