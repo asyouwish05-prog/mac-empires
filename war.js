@@ -492,8 +492,8 @@ function render() {
         '<label>軍旗の色</label><div class="wcolors" id="w-colors">' + Object.keys(COLORS).map(k => { const used = taken[k] && taken[k] !== user.uid; return '<button type="button" class="wcolor" data-c="' + k + '" aria-pressed="' + (k === color) + '"' + (used ? ' disabled' : '') + '><i class="wdot" style="background:' + COLORS[k][1] + '"></i>' + COLORS[k][0] + (used ? '（使用中）' : '') + '</button>'; }).join('') + '</div>' +
         (!flagsLoaded ? '<p class="note">使用中の色を確認しています…</p>' : !color ? '<p class="note" style="color:var(--warn)">5色すべて使用中です。総大将に相談してください</p>' : '') +
         '<label>合言葉<input type="text" id="w-code" autocomplete="off" placeholder="仲間から聞いた合言葉"></label>' +
-        '<p class="note"><b style="color:var(--gold-hi)">武士の誓い</b>：出陣は実際に店に行って注文したときだけ。行っていなくてもボタンが押せる場面があっても、ズルはなしで戦います。参戦するとこの誓いに同意したことになります。</p>' +
-        '<div class="row"><button class="primary" type="submit"' + (busy ? ' disabled' : '') + '>誓って参戦する</button><button class="ghost" type="button" id="w-out">ログアウト</button></div>' +
+        '<p class="note"><b style="color:var(--gold-hi)">インテグリティ</b>：行ってなくてもボタン押せるので、ズルはなしね。インテグリティをもって対応しましょう。</p>' +
+        '<div class="row"><button class="primary" type="submit"' + (busy ? ' disabled' : '') + '>参戦する</button><button class="ghost" type="button" id="w-out">ログアウト</button></div>' +
         (joinMsg ? '<p class="note" style="color:var(--warn)">' + esc(joinMsg) + '</p>' : '') +
       '</form>';
     body.querySelectorAll('.wcolor').forEach(b => b.onclick = () => { color = b.dataset.c; body.querySelectorAll('.wcolor').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
