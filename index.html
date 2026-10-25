@@ -153,6 +153,33 @@ textarea { min-height: 56px; resize: vertical; }
 @media (prefers-reduced-motion: reduce) { .cutin.play { animation: fade 1.3s both; } @keyframes fade { 0%,100% { opacity: 0; } 10%,85% { opacity: 1; } } }
 
 /* menu */
+.tour { position: fixed; inset: 0; z-index: 20; }
+.tour-ring { position: fixed; border-radius: 50%; border: 2px solid var(--gold-hi); box-shadow: 0 0 0 9999px rgba(0,0,0,.74); transition: all .3s ease; pointer-events: none; }
+.tour-card { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); margin-inline: auto; max-width: 440px; background: var(--lacquer); border: 1px solid var(--gold); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 12px 40px rgba(0,0,0,.6); }
+.tour-card h2 { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: var(--gold-hi); text-wrap: balance; }
+.tour-card p { font-size: 14px; line-height: 1.7; color: var(--paper); }
+.tour-card .note b { color: var(--gold-hi); }
+.tour-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.tour-dots { display: flex; gap: 5px; }
+.tour-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.tour-dots i.on { background: var(--gold-hi); }
+@media (prefers-reduced-motion: reduce) { .tour-ring { transition: none; } }
+.modal { position: fixed; inset: 0; z-index: 15; background: rgba(0,0,0,.72); display: flex; align-items: center; justify-content: center; padding-block: 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.modal-card { background: var(--ink); border: 1px solid var(--gold); border-radius: 12px; width: 100%; max-width: 480px; max-height: 100%; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 16px; }
+.modal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.modal-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 21px; color: var(--gold-hi); text-wrap: balance; }
+.modal-eyebrow { font-size: 10px; letter-spacing: .3em; color: var(--muted); }
+.law { display: flex; flex-direction: column; gap: 6px; }
+.law p, .law li { font-size: 13px; line-height: 1.75; color: var(--paper); }
+.law ul { padding-left: 1.2em; margin: 0; display: flex; flex-direction: column; gap: 2px; }
+.law b { color: var(--gold-hi); font-weight: 700; }
+.ltable { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.ltable th, .ltable td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+.ltable th { color: var(--muted); font-weight: 500; font-size: 11px; letter-spacing: .06em; }
+.tscroll { overflow-x: auto; }
+.delta { font-size: 11px; color: var(--muted); }
+.delta.up { color: var(--jade); }
+.delta.down { color: var(--warn); }
 .menu { position: absolute; inset: 0; z-index: 8; background: var(--ink); display: flex; flex-direction: column; }
 .menu-head { display: flex; align-items: center; justify-content: space-between; padding-block: 12px; padding-left: var(--gutter-l); padding-right: var(--gutter-r); border-bottom: 1px solid var(--line); }
 .menu-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 20px; color: var(--gold-hi); }
@@ -227,6 +254,8 @@ h3 { font-family: var(--font-display); font-weight: 800; font-size: 16px; color:
       <button class="tool" id="b-menu" aria-label="軍略メニュー">略<small>軍略</small></button>
     </div>
 
+    <div class="tour" id="tour" hidden><div class="tour-ring" id="tour-ring"></div><div class="tour-card" id="tour-card" role="dialog" aria-live="polite"></div></div>
+    <div class="modal" id="modal" hidden><div class="modal-card" role="dialog"><div class="modal-head"><div><div class="modal-eyebrow" id="modal-ey"></div><h2 id="modal-title"></h2></div><button class="x" id="modal-x" aria-label="閉じる">×</button></div><div id="modal-body" style="display:flex;flex-direction:column;gap:16px"></div></div></div>
     <div class="cutin" id="cutin" hidden><div class="ey" id="cut-ey">制圧</div><div class="tx" id="cut-tx">完全制圧！</div></div>
 
     <section class="sheet" id="sheet" hidden aria-live="polite"></section>
@@ -240,6 +269,7 @@ h3 { font-family: var(--font-display); font-weight: 800; font-size: 16px; color:
         <button class="tab" role="tab" data-tab="month" aria-selected="false">月報</button>
         <button class="tab" role="tab" data-tab="list" aria-selected="false">城一覧</button>
         <button class="tab" role="tab" data-tab="treasure" aria-selected="false">十大秘宝</button>
+        <button class="tab" role="tab" data-tab="rules" aria-selected="false">軍法</button>
         <button class="tab" role="tab" data-tab="data" aria-selected="false">記録管理</button>
       </div>
       <div class="menu-body" id="menu-body"></div>
@@ -624,7 +654,7 @@ function onTap(px, py, ll) {
   if (!ll) ll = G ? null : toLL(wx(px), wy(py));
   if (moveId && ll) {
     const s = byId(moveId); moveId = null;
-    if (s) { s.lat = +ll[0].toFixed(6); s.lng = +ll[1].toFixed(6); save(); say('「' + s.name + '」の位置を直しました', 'good'); select(s.id); }
+    if (s) { s.lat = +ll[0].toFixed(6); s.lng = +ll[1].toFixed(6); shareStore(s); save(); say('「' + s.name + '」の位置を直しました', 'good'); select(s.id); }
     return;
   }
   if (buildMode && ll) { openBuild(ll[0], ll[1]); return; }
@@ -837,6 +867,7 @@ let undoUntil = 0, undoTimer = null, cool = false, removeArm = false;
 function select(id) { selected = id; removeArm = false; renderSheet(); const s = byId(id); if (s) focusStore(s); draw(); }
 function closeSheet() { selected = null; sheet.hidden = true; draw(); }
 const byId = id => state.stores.find(s => s.id === id);
+function shareStore(s, gone) { s.e = Date.now(); if (window.EMP_WAR) EMP_WAR.onStoreEdit(s, !!gone); }
 const fmtD = t => { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
 function renderSheet() {
@@ -886,11 +917,12 @@ function renderSheet() {
     const foot = sheet.querySelector('.sheet-foot');
     foot.innerHTML = '<input type="text" id="sh-newname" value="' + esc(s.name) + '" maxlength="30" style="flex:1;min-width:0"><button class="primary" id="sh-ok">改名</button>';
     const inp = $('#sh-newname'); inp.focus(); inp.select();
-    $('#sh-ok').onclick = () => { const v = inp.value.trim(); if (v) { s.name = v; save(); } renderSheet(); draw(); };
+    $('#sh-ok').onclick = () => { const v = inp.value.trim(); if (v) { s.name = v; shareStore(s); save(); } renderSheet(); draw(); };
   };
   $('#sh-move').onclick = () => { moveId = s.id; buildMode = false; $('#b-build').classList.remove('on'); sheet.hidden = true; say('「' + s.name + '」の正しい位置を地図上でタップしてください', 'good'); draw(); };
   $('#sh-remove').onclick = () => {
     if (!removeArm) { removeArm = true; renderSheet(); return; }
+    shareStore(s, true);
     state.stores = state.stores.filter(x => x.id !== s.id);
     state.log = state.log.filter(e => e.s !== s.id);
     save(); recompute(); refreshHeader(); closeSheet(); say('「' + s.name + '」を地図から外しました', 'good');
@@ -959,7 +991,7 @@ function openBuild(lat, lng) {
   $('#bd-ok').onclick = () => {
     const name = inp.value.trim(); if (!name) { inp.focus(); return; }
     const s = { id: 'c' + Date.now().toString(36), name, lat: +lat.toFixed(6), lng: +lng.toFixed(6), custom: true };
-    state.stores.push(s); save(); recompute(); end(); select(s.id); say('「' + name + '」を築城しました', 'good');
+    state.stores.push(s); shareStore(s); save(); recompute(); end(); select(s.id); say('「' + name + '」を築城しました', 'good');
   };
 }
 
@@ -1120,10 +1152,10 @@ async function scoutGoogle() {
       if (!hit) hit = state.stores.find(s => { const [a, b] = toXY(s.lat, s.lng); return Math.hypot(a - x, b - y) < 150 && (!nm || s.name.replace(/店$/, '').includes(nm.replace(/店$/, '').slice(0, 2))); });
       if (hit) {
         if (Math.hypot(...(([a, b]) => [a - x, b - y])(toXY(hit.lat, hit.lng))) > 5) fixed++;
-        hit.lat = lat; hit.lng = lng; hit.pid = pl.id; return;
+        hit.lat = lat; hit.lng = lng; hit.pid = pl.id; shareStore(hit); return;
       }
       if (state.stores.some(s => { const [a, b] = toXY(s.lat, s.lng); return Math.hypot(a - x, b - y) < 40; })) return;
-      state.stores.push({ id: 'g' + pl.id.slice(-12), pid: pl.id, name: nm ? (/店$/.test(nm) ? nm : nm + '店') : '名もなき城', lat, lng }); add++;
+      const ns = { id: 'g' + pl.id.slice(-12), pid: pl.id, name: nm ? (/店$/.test(nm) ? nm : nm + '店') : '名もなき城', lat, lng }; state.stores.push(ns); shareStore(ns); add++;
     });
     save(); recompute(); draw();
     say('偵察完了：新たに' + add + '城、位置補正' + fixed + '城' + (closed ? '、閉店' + closed + '件は除外' : ''), 'good');
@@ -1156,6 +1188,7 @@ function renderMenu() {
       '</div>' +
       '<div><h3>官位</h3><div class="ranks">' + RANKS.map(r => '<div class="' + (r === cur ? 'cur' : '') + '"><span>' + r[1] + '</span><span>' + r[0].toLocaleString() + ' pt〜</span></div>').join('') + '</div>' +
       (nextR ? '<p class="note" style="margin-top:8px">次の官位【' + nextR[1] + '】まであと ' + (nextR[0] - S.pt).toLocaleString() + ' pt</p>' : '<p class="note" style="margin-top:8px">最高位に到達しました</p>') + '</div>' +
+      (() => { const f = formation(); return '<div><h3>陣形</h3><p class="note">支配圏が重なり合う自軍の城は「連携城」になり、1城につき戦力が5%上がります（上限50%）。</p><div class="kv" style="margin-top:8px"><div><span>連携城</span><b>' + f.linked + '城</b></div><div><span>陣形ボーナス</span><b>+' + Math.round(f.buff * 100) + '%</b></div></div></div>'; })() +
       '<div><h3>城の位階</h3><div class="ranks">' + LEVELS.slice(1).map(l => '<div><span>Lv.' + l.lv + ' ' + l.t + '</span><span>' + l.need + '回 ・ 半径' + l.r.toLocaleString() + 'm</span></div>').join('') + '</div><p class="note" style="margin-top:8px">90日間訪れないと治安が悪化し、支配圏が地図から消えます。再訪すれば即座に回復します。Lv.5は永久不落です。</p></div>';
   } else if (tab === 'hist') {
     const groups = new Map();
@@ -1236,11 +1269,13 @@ function renderMenu() {
     const mx = Math.max(1, ...months.map(x => x.n)); const mixMax = Math.max(1, ...Object.values(mix));
     const fav = [...stores].map(id => [id, state.log.filter(e => e.s === id && new Date(e.t).getMonth() === cm.m && new Date(e.t).getFullYear() === cm.y).length]).sort((a, b) => b[1] - a[1])[0];
     body.innerHTML =
+      '<div class="row"><button class="ghost" id="m-report">先月（' + ymLabel(shiftMonth(monthKey(Date.now()), -1)) + '）の戦果報告</button></div>' +
       '<div><h3>出陣回数（直近6か月）</h3><div class="months">' + months.map(x => '<div class="mcol"><span>' + x.n + '</span><i style="height:' + Math.round(x.n / mx * 110) + 'px"></i></div>').join('') + '</div>' +
       '<div class="mlabels">' + months.map(x => '<span>' + (x.m + 1) + '月</span>').join('') + '</div></div>' +
       '<div class="kv"><div><span>今月の出陣</span><b>' + cm.n + '回</b></div><div><span>今月の獲得兵力</span><b>' + cm.p.toLocaleString() + '</b></div>' +
       '<div><span>今月訪れた城</span><b>' + stores.size + '</b></div><div><span>今月の本拠地</span><b style="font-size:14px">' + (fav ? esc(byId(fav[0]).name) : '—') + '</b></div></div>' +
       '<div><h3>今月の兵糧内訳</h3><div class="mix">' + Object.keys(MENUS).map(k => '<div class="mix-row"><span>' + MENUS[k].name.replace('新兵器', '').replace('主力部隊', '').replace('パトロール', '') + '</span><div class="bar"><i style="width:' + Math.round(mix[k] / mixMax * 100) + '%"></i></div><span>' + mix[k] + '回</span></div>').join('') + '</div></div>';
+    $('#m-report').onclick = () => openMonthReport(shiftMonth(monthKey(Date.now()), -1));
   } else if (tab === 'list') {
     const list = state.stores.slice().sort((a, b) => D[b.id].v - D[a.id].v || a.name.localeCompare(b.name, 'ja'));
     body.innerHTML = '<div class="clist">' + list.map(s => {
@@ -1254,6 +1289,9 @@ function renderMenu() {
     body.innerHTML = '<p class="note">' + got + ' / 10 を所蔵</p><div class="treasures">' + TREASURES.map(t => t.ok(S)
       ? '<div class="tr"><b>' + t.name + '</b><p>' + t.desc + '</p><div class="need">' + t.need + '</div></div>'
       : '<div class="tr locked"><b>未発見の秘宝</b><p>条件を満たすと姿を現す。</p><div class="need">' + t.need + '</div></div>').join('') + '</div>';
+  } else if (tab === 'rules') {
+    body.innerHTML = rulesHTML();
+    $('#r-tour').onclick = () => { $('#menu').hidden = true; startTour(); };
   } else if (tab === 'data') {
     body.innerHTML =
       '<div><h3>地図</h3><p class="note">現在の地図：<b style="color:var(--paper)">' + mapStatus + '</b>。GoogleマップのAPIキーはこの端末にだけ保存されます。</p><input type="text" id="gk" placeholder="AIza…" autocomplete="off" spellcheck="false" style="margin-top:8px;font-size:12px"><div class="row" style="margin-top:8px"><button class="primary" id="gk-save">保存して再読み込み</button>' + (lsGet(GKEY) ? '<button class="ghost" id="gk-del">キーを削除</button>' : '') + '</div></div>' +
@@ -1289,12 +1327,165 @@ function renderMenu() {
 
 $('#b-fit').addEventListener('click', () => { sfx('select'); fitAll(true); });
 
+/* ---------- formation (overlapping territory) ---------- */
+function formationOf(list) {
+  // list: [{lat, lng, r}] — a castle is linked when its territory overlaps another of the same army
+  let linked = 0;
+  const pts = list.map(c => { const [x, y] = toXY(c.lat, c.lng); return [x, y, c.r]; });
+  pts.forEach((a, i) => { if (pts.some((b, j) => j !== i && Math.hypot(a[0] - b[0], a[1] - b[1]) < a[2] + b[2])) linked++; });
+  return { linked, buff: Math.min(0.5, linked * 0.05) };
+}
+function formation() {
+  return formationOf(state.stores.filter(s => D[s.id] && D[s.id].v && !D[s.id].fallen && !(window.EMP_WAR && EMP_WAR.blocked(s.id))).map(s => ({ lat: s.lat, lng: s.lng, r: D[s.id].L.r })));
+}
+
+/* ---------- modal ---------- */
+let modalClose = null;
+function showModal(ey, title, html, onClose) {
+  $('#modal-ey').textContent = ey || ''; $('#modal-title').textContent = title; $('#modal-body').innerHTML = html;
+  $('#modal').hidden = false; modalClose = onClose || null;
+}
+function hideModal() { $('#modal').hidden = true; const f = modalClose; modalClose = null; if (f) f(); }
+$('#modal-x').addEventListener('click', () => { sfx('select'); hideModal(); });
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') hideModal(); });
+
+/* ---------- first-run tour ---------- */
+const TOUR = [
+  { t: 'McDonald\'s EMPIRESへようこそ', b: 'マクドナルドに通うたびに城が育ち、地図上の支配圏が広がっていく陣取りゲームです。7つの手順で遊び方を紹介します。' },
+  { t: '地図の印が城です', el: '#map', b: '緑の丸が未制圧の城、赤いひし形が自軍の城です。ひし形の数字は城のレベル。城をタップすると、城の情報と出陣のボタンが開きます。' },
+  { t: '店の30m以内で出陣', b: '店に着いたら城を開き、注文した兵糧（朝マック・セット・期間限定・カフェ）を選ぶと出陣です。同じ日に別の城を回ると<b>連戦ボーナス</b>、毎日通うと<b>連日ボーナス</b>が付きます。' },
+  { t: '地図にない店は築城', el: '#b-build', b: '「築」を押してから、地図上の店の位置をタップし、店名を入れると新しい城ができます。合戦に参加していれば、建てた城は仲間の地図にも現れます。' },
+  { t: '店名と位置の修正をお願いします', b: '城を開いた画面の下にある「城の名を改める」「位置を直す」で直せます。店名が違う、ピンがずれている、と気づいたら直してください。合戦に参加していれば、直した内容は仲間全員の地図に反映されます。閉店した店は「城を地図から外す」で消せます。' },
+  { t: '偵察で店を探す', el: '#b-scan', b: '「偵」を押すと、表示中の範囲のマクドナルドを探して城として追加し、ずれている城の位置も直します。' },
+  { t: '軍略メニュー', el: '#b-menu', b: '「略」から戦歴・イベント・月報・軍法（ルールのまとめ）を見られます。「合戦」タブでは武将名を決めて仲間と城を奪い合えます。武将名と軍旗の色は「合戦」タブの「自軍の設定」でいつでも変えられます。' }
+];
+let tourI = 0, tourDone = null;
+function startTour(onDone) { tourI = 0; tourDone = onDone || null; closeSheet(); $('#tour').hidden = false; showTourStep(); }
+function endTour() { $('#tour').hidden = true; lsSet('mce_tour_v1', '1'); const f = tourDone; tourDone = null; if (f) f(); }
+function showTourStep() {
+  const st = TOUR[tourI], ring = $('#tour-ring'), card = $('#tour-card');
+  const el = st.el && document.querySelector(st.el);
+  let low = true;
+  if (el && st.el !== '#map') {
+    const r = el.getBoundingClientRect(), pad = 8, d = Math.max(r.width, r.height) + pad * 2;
+    ring.style.cssText = 'left:' + (r.left + r.width / 2 - d / 2) + 'px;top:' + (r.top + r.height / 2 - d / 2) + 'px;width:' + d + 'px;height:' + d + 'px';
+    low = r.top + r.height / 2 < innerHeight * 0.55;
+  } else if (el) {
+    const r = el.getBoundingClientRect();
+    ring.style.cssText = 'left:' + (r.left + 24) + 'px;top:' + (r.top + 24) + 'px;width:' + (r.width - 48) + 'px;height:' + Math.max(60, r.height * 0.45) + 'px;border-radius:14px';
+  } else ring.style.cssText = 'left:50%;top:40%;width:0;height:0;border-width:0';
+  card.style.top = low ? 'auto' : 'calc(24px + env(safe-area-inset-top, 0px))';
+  card.style.bottom = low ? 'calc(24px + env(safe-area-inset-bottom, 0px))' : 'auto';
+  card.innerHTML = '<h2>' + st.t + '</h2><p>' + st.b + '</p>' +
+    '<div class="tour-foot"><div class="tour-dots">' + TOUR.map((_, i) => '<i class="' + (i === tourI ? 'on' : '') + '"></i>').join('') + '</div>' +
+    '<div class="row">' + (tourI < TOUR.length - 1 ? '<button class="ghost" id="tour-skip">閉じる</button>' : '') + (tourI ? '<button class="ghost" id="tour-back">戻る</button>' : '') +
+    '<button class="primary" id="tour-next">' + (tourI < TOUR.length - 1 ? '次へ' : '出陣する') + '</button></div></div>';
+  $('#tour-next').onclick = () => { sfx('select'); if (tourI < TOUR.length - 1) { tourI++; showTourStep(); } else endTour(); };
+  const bk = $('#tour-back'); if (bk) bk.onclick = () => { sfx('select'); tourI--; showTourStep(); };
+  const sk = $('#tour-skip'); if (sk) sk.onclick = () => { sfx('select'); endTour(); };
+}
+
+/* ---------- 軍法 (rules summary) ---------- */
+function rulesHTML() {
+  const tbl = (head, rows) => '<div class="tscroll"><table class="ltable"><tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr>' + rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('') + '</table></div>';
+  return '<div class="row"><button class="ghost" id="r-tour">操作説明をもう一度見る</button></div>' +
+    '<section class="law"><h3>一、出陣</h3><ul><li>店の<b>30m以内</b>で城を開き、注文した兵糧を選ぶと出陣（チェックイン）になります。</li><li>店から80m以内に入ると、その城が自動で選ばれます。</li><li>誤って出陣したときは15秒以内なら「取り消す」、それ以降は戦歴タブで削除できます。</li></ul>' +
+      tbl(['兵糧', '兵力'], Object.keys(MENUS).map(k => [MENUS[k].name, '+' + MENUS[k].pt])) + '</section>' +
+    '<section class="law"><h3>二、城の位階</h3><p>同じ城に通うほど城が育ち、支配圏（円）が広がります。</p>' +
+      tbl(['位階', '必要な出陣', '支配半径'], LEVELS.slice(1).map(l => ['Lv.' + l.lv + ' ' + l.t, l.need + '回', l.r.toLocaleString() + 'm'])) +
+      '<ul><li><b>治安維持</b>：90日間訪れないと治安が悪化し、支配圏が消えます。再訪すれば回復します。</li><li>Lv.5「覇王の王都」は永久不落で、防衛期限がありません。</li></ul></section>' +
+    '<section class="law"><h3>三、ボーナス</h3><ul>' +
+      '<li><b>連戦</b>：同じ日に別の城を制圧すると、2城目+50、3城目+100、4城目以降+150。</li>' +
+      '<li><b>連日出陣</b>：3日以上続けて出陣すると、その日の最初の出陣に+50（5日以上は+100）。</li>' +
+      '<li><b>イベント</b>：自分で作ったイベントの期間中は、兵力×1.5／×2／×3／毎回+100のいずれか。</li>' +
+      '<li><b>陣形</b>：支配圏が重なる自軍の城は「連携城」。1城につき戦力+5%（上限+50%）。合戦イベントの戦力に掛かります。</li></ul></section>' +
+    '<section class="law"><h3>四、官位と秘宝</h3>' + tbl(['官位', '総兵力'], RANKS.map(r => [r[1], r[0].toLocaleString() + 'pt〜'])) +
+      '<p>十大秘宝は兵力や出陣回数などの条件を満たすと解放されます（十大秘宝タブで条件を確認できます）。</p></section>' +
+    '<section class="law"><h3>五、合戦（仲間との対戦）</h3><ul>' +
+      '<li><b>城主</b>：直近90日の出陣回数が一番多い軍がその城の城主です。</li>' +
+      '<li><b>同数のとき</b>：先にその城を制圧した軍が城主のままです。</li>' +
+      '<li><b>落城</b>：他の軍に回数で追い抜かれると落城します。留守の間に城が動いた場合は、次にアプリを開いたときに知らせます。</li>' +
+      '<li><b>表示</b>：自軍の領土は金、他の軍は軍旗の色。敵の城には旗が立ちます。</li>' +
+      '<li><b>仲間の手伝い</b>：築城・店名の修正・位置の修正・閉店した城の削除は、仲間全員の地図に反映されます。</li>' +
+      '<li><b>公開される情報</b>：武将名・城主・出陣回数・ランキングのみ。出陣した時刻やメールアドレスは見えません。</li></ul></section>' +
+    '<section class="law"><h3>六、合戦イベント</h3><ul>' +
+      '<li>総大将が期間と賞品を決めて開催します。</li>' +
+      '<li><b>戦力</b>＝期間中に獲得した兵力 ×（1＋陣形ボーナス）。期間が終わると、戦力が一番高い軍の勝ちです。</li>' +
+      '<li><b>賞品</b>：勝者は戦利品（お宝）を得ます。「城の奪取あり」の合戦では、敗れた各軍から1城ずつ（勝者との回数差が一番小さい城）を奪い、30日間は回数に関係なく勝者の城になります。</li>' +
+      '<li>結果は期間終了の翌日以降、誰かがアプリを開いたときに集計され、全員に通知されます。</li></ul></section>' +
+    '<section class="law"><h3>七、月末の締め</h3><ul><li>毎月末で締め、翌月はじめてアプリを開いたときに先月の戦果報告を表示します。</li><li>合戦に参加中は、先月の戦力ランキングと月末時点の城の数も報告します。</li><li>月報タブからいつでも見直せます。</li></ul></section>';
+}
+
+/* ---------- monthly report ---------- */
+const monthKey = t => { const d = new Date(t); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); };
+function shiftMonth(ym, n) { const d = new Date(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + n, 1); return monthKey(d); }
+const ymLabel = ym => +ym.slice(0, 4) + '年' + +ym.slice(5, 7) + '月';
+function monthStats(ym) {
+  const L = state.log.filter(e => monthKey(e.t) === ym);
+  const visits = {}; L.forEach(e => { visits[e.s] = (visits[e.s] || 0) + 1; });
+  const firsts = {}; state.log.forEach(e => { if (!(e.s in firsts)) firsts[e.s] = e.t; });
+  const fresh = Object.keys(firsts).filter(id => monthKey(firsts[id]) === ym).length;
+  const top = Object.entries(visits).sort((a, b) => b[1] - a[1])[0];
+  const endT = new Date(+ym.slice(0, 4), +ym.slice(5, 7), 1).getTime();
+  const ptToEnd = state.log.filter(e => e.t < endT).reduce((a, e) => a + totalOf(e), 0);
+  return { n: L.length, pt: L.reduce((a, e) => a + totalOf(e), 0), bonus: L.reduce((a, e) => a + (e.bx || 0), 0), castles: Object.keys(visits).length, fresh, days: new Set(L.map(e => dayKey(e.t))).size, top, rank: rankOf(ptToEnd)[1] };
+}
+function monthReportHTML(ym) {
+  const a = monthStats(ym), b = monthStats(shiftMonth(ym, -1));
+  const dl = (x, y, u) => { const d = x - y; return '<span class="delta ' + (d > 0 ? 'up' : d < 0 ? 'down' : '') + '">前月比 ' + (d > 0 ? '+' : '') + d.toLocaleString() + (u || '') + '</span>'; };
+  const sb = byId(a.top ? a.top[0] : '');
+  return '<div class="kv">' +
+      '<div><span>出陣</span><b>' + a.n + '回</b>' + dl(a.n, b.n, '回') + '</div>' +
+      '<div><span>獲得兵力</span><b>' + a.pt.toLocaleString() + '</b>' + dl(a.pt, b.pt) + '</div>' +
+      '<div><span>訪れた城</span><b>' + a.castles + '城</b>' + dl(a.castles, b.castles, '城') + '</div>' +
+      '<div><span>新たに制圧</span><b>' + a.fresh + '城</b></div>' +
+      '<div><span>出陣した日</span><b>' + a.days + '日</b></div>' +
+      '<div><span>うちボーナス</span><b>' + a.bonus.toLocaleString() + '</b></div>' +
+    '</div>' +
+    '<p class="note">本拠地：<b style="color:var(--paper)">' + (sb ? esc(sb.name) + '（' + a.top[1] + '回）' : '—') + '</b> ・ 月末の官位：<b style="color:var(--paper)">' + a.rank + '</b></p>' +
+    (window.EMP_WAR ? EMP_WAR.monthReport(ym) : '');
+}
+function openMonthReport(ym) { showModal('月末の戦果報告', ymLabel(ym) + 'の戦果', monthReportHTML(ym)); }
+function maybeReport(tries) {
+  tries = tries || 0;
+  const ym = shiftMonth(monthKey(Date.now()), -1);
+  if (lsGet('mce_report_seen') === ym) return;
+  const mine = state.log.some(e => monthKey(e.t) === ym);
+  if (window.EMP_WAR && EMP_WAR.pending() && tries < 10) return setTimeout(() => maybeReport(tries + 1), 1000);
+  const war = window.EMP_WAR && EMP_WAR.hasMonth(ym);
+  if (!mine && !war) { lsSet('mce_report_seen', ym); return; }
+  if (!$('#tour').hidden || !$('#modal').hidden) return setTimeout(() => maybeReport(tries), 1500);
+  lsSet('mce_report_seen', ym); sfx('treasure'); openMonthReport(ym);
+}
+
 /* ---------- bridge for the multiplayer module (GitHub Pages build only) ---------- */
 window.EMP = {
   get state() { return state; }, get D() { return D; }, get S() { return S; }, get selected() { return selected; }, get tab() { return tab; },
   LEVELS, lvOf, dayKey, esc, DAY, GUARD, toXY, MENUS,
   draw, say, playCuts, select, byId, renderSheet, renderMenu, refreshHeader, recompute, save, sfx,
   menuOpen: () => !$('#menu').hidden,
+  showModal, formationOf, monthKey, shiftMonth, ymLabel,
+  syncStores(list) {
+    let ch = 0;
+    list.forEach(c => {
+      const s = byId(c.id);
+      if (c.gone) {
+        if (s && !(D[s.id] && D[s.id].v) && (s.e || 0) < c.t) { state.stores = state.stores.filter(x => x.id !== c.id); if (selected === c.id) closeSheet(); ch++; }
+        return;
+      }
+      if (!s) {
+        const [x, y] = toXY(c.lat, c.lng);
+        if (state.stores.some(o => { const [a, b] = toXY(o.lat, o.lng); return Math.hypot(a - x, b - y) < 30; })) return;
+        state.stores.push({ id: c.id, name: c.n, lat: c.lat, lng: c.lng, e: c.t, shared: true }); ch++; return;
+      }
+      if ((s.e || 0) < c.t) {
+        if (s.name !== c.n || s.lat !== c.lat || s.lng !== c.lng) { s.name = c.n; s.lat = c.lat; s.lng = c.lng; ch++; }
+        s.e = c.t;
+      }
+    });
+    if (ch) { save(); recompute(); draw(); if (selected) renderSheet(); }
+    return ch;
+  },
   addStores(list) {
     let n = 0;
     list.forEach(x => { if (!byId(x.id)) { state.stores.push(x); n++; } });
@@ -1309,6 +1500,7 @@ new ResizeObserver(resize).observe($('#wrap'));
 resize(); fitAll(false); refreshHeader();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
 setTimeout(connectCloud, 0);
+setTimeout(() => { if (!lsGet('mce_tour_v1')) startTour(() => setTimeout(maybeReport, 600)); else maybeReport(); }, 900);
 loadGoogle();
 startGeo();
 })();
