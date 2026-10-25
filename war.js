@@ -19,7 +19,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const COLORS = {
-  beni: ['紅', '#e0483c'], ao: ['蒼', '#4a8fe0'], midori: ['翠', '#3fbf7f'], murasaki: ['紫', '#a066d6'], shiro: ['白', '#e8e2d0']
+  beni: ['紅', '#e0483c'], ao: ['蒼', '#4a8fe0'], midori: ['翠', '#3fbf7f'], murasaki: ['紫', '#a066d6'], shiro: ['白', '#e8e2d0'],
+  dai: ['橙', '#e8892c'], momo: ['桃', '#e66fa8'], sora: ['空', '#4fc3d9'], moegi: ['萌', '#9ccc3d'], gin: ['銀', '#9aa3ad']
 };
 const esc = E.esc;
 const ls = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
