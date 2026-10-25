@@ -329,6 +329,7 @@ function save() {
   state.updated = Date.now();
   const json = JSON.stringify(state);
   lsSet(KEY, json);
+  if (window.EMP_WAR) EMP_WAR.onSave();
   if (!dbRef) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
@@ -495,7 +496,7 @@ function paint() {
   }
 
   // territory: union of circles
-  const live = state.stores.filter(s => D[s.id] && D[s.id].v && !D[s.id].fallen);
+  const live = state.stores.filter(s => D[s.id] && D[s.id].v && !D[s.id].fallen && !(window.EMP_WAR && EMP_WAR.blocked(s.id)));
   tctx.setTransform(DPR, 0, 0, DPR, 0, 0); tctx.clearRect(0, 0, W, H);
   rctx.setTransform(DPR, 0, 0, DPR, 0, 0); rctx.clearRect(0, 0, W, H);
   if (live.length) {
@@ -519,6 +520,7 @@ function paint() {
     ctx.beginPath(); ctx.arc(px, py, d.L.r * ppm, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
   });
 
+  if (window.EMP_WAR) { try { EMP_WAR.paint(ctx, P, ppm); } catch (e) {} }
   if (me) {
     const [px, py] = P(me.lat, me.lng);
     const acc = Math.max(8, (me.acc || 30) * ppm);
@@ -861,6 +863,7 @@ function renderSheet() {
     '</div>' +
     (next ? '<div class="meter"><div class="meter-row"><span>次は <b>Lv.' + next.lv + ' ' + next.t + '</b>（半径' + next.r.toLocaleString() + 'm）</span><span>あと' + (next.need - d.v) + '回</span></div><div class="bar"><i style="width:' + prog + '%"></i></div></div>' : '') +
     guard +
+    (window.EMP_WAR ? EMP_WAR.sheetInfo(s) : '') +
     '<div class="sect-label">兵糧を選んで出陣' + (today ? ' ・ 本日は出陣済み' : '') + '</div>' +
     '<div class="gate' + (gt.ok ? ' ok' : '') + '" id="sh-gate">' + esc(gt.msg) + '</div>' +
     (chips.length ? '<div class="chips">' + chips.map(c => '<span class="chip">' + esc(c) + '</span>').join('') + '</div>' : '') +
@@ -1133,11 +1136,13 @@ async function scoutGoogle() {
 let tab = 'war', resetStage = 0, histDays = 30, delArm = -1, evDelArm = null;
 $('#b-menu').addEventListener('click', () => { sfx('select'); resetStage = 0; $('#menu').hidden = false; renderMenu(); });
 $('#menu-x').addEventListener('click', () => { sfx('select'); $('#menu').hidden = true; });
-document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => {
+$('.tabs').addEventListener('click', ev => {
+  const b = ev.target.closest('.tab'); if (!b) return;
   tab = b.dataset.tab; resetStage = 0; delArm = -1; evDelArm = null; document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x === b))); renderMenu();
-}));
+});
 function renderMenu() {
   const body = $('#menu-body'); const cur = rankOf(S.pt);
+  if (tab === 'kassen') { if (window.EMP_WAR) EMP_WAR.renderTab(body); return; }
   if (tab === 'war') {
     const nextR = RANKS.find(r => r[0] > S.pt);
     body.innerHTML =
@@ -1284,6 +1289,20 @@ function renderMenu() {
 
 $('#b-fit').addEventListener('click', () => { sfx('select'); fitAll(true); });
 
+/* ---------- bridge for the multiplayer module (GitHub Pages build only) ---------- */
+window.EMP = {
+  get state() { return state; }, get D() { return D; }, get S() { return S; }, get selected() { return selected; }, get tab() { return tab; },
+  LEVELS, lvOf, dayKey, esc, DAY, GUARD, toXY, MENUS,
+  draw, say, playCuts, select, byId, renderSheet, renderMenu, refreshHeader, recompute, save, sfx,
+  menuOpen: () => !$('#menu').hidden,
+  addStores(list) {
+    let n = 0;
+    list.forEach(x => { if (!byId(x.id)) { state.stores.push(x); n++; } });
+    if (n) { save(); recompute(); draw(); }
+    return n;
+  }
+};
+
 /* ---------- boot ---------- */
 recompute();
 new ResizeObserver(resize).observe($('#wrap'));
@@ -1295,5 +1314,6 @@ startGeo();
 })();
 </script>
 
+<script type="module" src="war.js"></script>
 </body>
 </html>
