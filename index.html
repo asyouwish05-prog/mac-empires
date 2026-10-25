@@ -1351,9 +1351,10 @@ $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') hideMo
 
 /* ---------- first-run tour ---------- */
 const TOUR = [
-  { t: 'McDonald\'s EMPIRESへようこそ', b: 'マクドナルドに通うたびに城が育ち、地図上の支配圏が広がっていく陣取りゲームです。7つの手順で遊び方を紹介します。' },
+  { t: 'McDonald\'s EMPIRESへようこそ', b: 'マクドナルドに通うたびに城が育ち、地図上の支配圏が広がっていく陣取りゲームです。8つの手順で遊び方を紹介します。' },
   { t: '地図の印が城です', el: '#map', b: '緑の丸が未制圧の城、赤いひし形が自軍の城です。ひし形の数字は城のレベル。城をタップすると、城の情報と出陣のボタンが開きます。' },
   { t: '店の30m以内で出陣', b: '店に着いたら城を開き、注文した兵糧（朝マック・セット・期間限定・カフェ）を選ぶと出陣です。同じ日に別の城を回ると<b>連戦ボーナス</b>、毎日通うと<b>連日ボーナス</b>が付きます。' },
+  { t: '武士の誓い（インテグリティ）', b: '出陣は<b>実際に店に行って、注文したときだけ</b>。位置情報のずれや設定の都合で、行っていなくてもボタンが押せてしまう場面があるかもしれませんが、ズルはなしでお願いします。仲間との合戦は、一人ひとりの誠実さで成り立っています。' },
   { t: '地図にない店は築城', el: '#b-build', b: '「築」を押してから、地図上の店の位置をタップし、店名を入れると新しい城ができます。合戦に参加していれば、建てた城は仲間の地図にも現れます。' },
   { t: '店名と位置の修正をお願いします', b: '城を開いた画面の下にある「城の名を改める」「位置を直す」で直せます。店名が違う、ピンがずれている、と気づいたら直してください。合戦に参加していれば、直した内容は仲間全員の地図に反映されます。閉店した店は「城を地図から外す」で消せます。' },
   { t: '偵察で店を探す', el: '#b-scan', b: '「偵」を押すと、表示中の範囲のマクドナルドを探して城として追加し、ずれている城の位置も直します。' },
@@ -1361,7 +1362,7 @@ const TOUR = [
 ];
 let tourI = 0, tourDone = null;
 function startTour(onDone) { tourI = 0; tourDone = onDone || null; closeSheet(); $('#tour').hidden = false; showTourStep(); }
-function endTour() { $('#tour').hidden = true; lsSet('mce_tour_v1', '1'); const f = tourDone; tourDone = null; if (f) f(); }
+function endTour() { $('#tour').hidden = true; lsSet('mce_tour_v2', '1'); const f = tourDone; tourDone = null; if (f) f(); }
 function showTourStep() {
   const st = TOUR[tourI], ring = $('#tour-ring'), card = $('#tour-card');
   const el = st.el && document.querySelector(st.el);
@@ -1389,6 +1390,7 @@ function showTourStep() {
 function rulesHTML() {
   const tbl = (head, rows) => '<div class="tscroll"><table class="ltable"><tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr>' + rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('') + '</table></div>';
   return '<div class="row"><button class="ghost" id="r-tour">操作説明をもう一度見る</button></div>' +
+    '<section class="law"><h3>序、武士の誓い（インテグリティ）</h3><p>出陣は<b>実際に店に行き、注文したときだけ</b>記録します。行っていなくてもボタンが押せてしまう場面があっても、ズルはなしです。頼んでいない兵糧を選ぶのも同じです。この合戦は、仲間一人ひとりの誠実さで成り立っています。</p></section>' +
     '<section class="law"><h3>一、出陣</h3><ul><li>店の<b>30m以内</b>で城を開き、注文した兵糧を選ぶと出陣（チェックイン）になります。</li><li>店から80m以内に入ると、その城が自動で選ばれます。</li><li>誤って出陣したときは15秒以内なら「取り消す」、それ以降は戦歴タブで削除できます。</li></ul>' +
       tbl(['兵糧', '兵力'], Object.keys(MENUS).map(k => [MENUS[k].name, '+' + MENUS[k].pt])) + '</section>' +
     '<section class="law"><h3>二、城の位階</h3><p>同じ城に通うほど城が育ち、支配圏（円）が広がります。</p>' +
@@ -1500,7 +1502,7 @@ new ResizeObserver(resize).observe($('#wrap'));
 resize(); fitAll(false); refreshHeader();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
 setTimeout(connectCloud, 0);
-setTimeout(() => { if (!lsGet('mce_tour_v1')) startTour(() => setTimeout(maybeReport, 600)); else maybeReport(); }, 900);
+setTimeout(() => { if (!lsGet('mce_tour_v2')) startTour(() => setTimeout(maybeReport, 600)); else maybeReport(); }, 900);
 loadGoogle();
 startGeo();
 })();
