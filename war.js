@@ -161,13 +161,13 @@ function detect() {
       if (a === me && b && b !== me) { addNews('落城', nm + 'を' + pname(b) + '軍に奪われた', 'lost'); cuts.push(['落城', nm + ' — ' + pname(b) + '軍に奪われた', 'attack']); }
       else if (a === me && !b) addNews('失陥', nm + 'の支配が途絶えた', 'lost');
       else if (b === me && a && a !== me) { addNews('奪取', pname(a) + '軍から' + nm + 'を奪取', 'won'); cuts.push(['奪取', pname(a) + '軍から' + nm + 'を奪った！', 'levelup']); }
-      else if (b && b !== me && a && a !== me) addNews('戦況', pname(b) + '軍が' + pname(a) + '軍から' + nm + 'を奪取', '');
-      else if (b && b !== me && !a) addNews('進軍', pname(b) + '軍が' + nm + 'を制圧', '');
+      else if (b && b !== me && a && a !== me) { addNews('戦況', pname(b) + '軍が' + pname(a) + '軍から' + nm + 'を奪取', ''); cuts.push(['戦況', pname(b) + '軍が' + pname(a) + '軍から' + nm + 'を奪取', 'attack']); }
+      else if (b && b !== me && !a) { addNews('進軍', pname(b) + '軍が' + nm + 'を制圧', ''); cuts.push(['進軍', pname(b) + '軍が' + nm + 'を制圧', 'attack']); }
     });
   }
   prevOwn = cur; ls.set('mce_war_own_' + me, JSON.stringify(cur));
-  if (cuts.length > 3) E.playCuts([['戦況', '留守の間に' + cuts.length + '件の城が動いた', 'attack']]);
-  else if (cuts.length) E.playCuts(cuts);
+  if (cuts.length > 3) E.announce([['戦況', '留守の間に' + cuts.length + '件の城が動いた', 'attack', '留守の間に、' + cuts.length + '件の城が動きました。合戦タブで戦況を確かめてください']]);
+  else if (cuts.length) E.announce(cuts);
 }
 
 function refresh() {
@@ -240,7 +240,7 @@ function announceWars() {
   const me = user.uid, w = fresh[fresh.length - 1];
   if (member.joinedAt && w.doneAt < member.joinedAt) return;
   fresh.forEach(x => addNews('合戦', '「' + x.name + '」' + (x.winner ? pname(x.winner) + '軍の勝利' : '引き分け'), x.winner === me ? 'won' : x.winner ? 'lost' : ''));
-  E.playCuts([w.winner === me ? ['勝利', '合戦「' + w.name + '」を制した！', 'levelup'] : w.winner ? ['敗北', '合戦「' + w.name + '」は' + pname(w.winner) + '軍の勝利', 'attack'] : ['引き分け', '合戦「' + w.name + '」は決着つかず', 'attack']]);
+  E.announce([w.winner === me ? ['勝利', '合戦「' + w.name + '」を制した！', 'levelup'] : w.winner ? ['敗北', '合戦「' + w.name + '」は' + pname(w.winner) + '軍の勝利', 'attack'] : ['引き分け', '合戦「' + w.name + '」は決着つかず', 'attack']]);
   setTimeout(() => E.showModal('合戦の結果', w.name, warResultHTML(w)), 1500);
 }
 function warsSection() {
@@ -282,7 +282,7 @@ function bindWars(body) {
     const id = 'w' + Date.now().toString(36);
     try {
       await setDoc(doc(db, 'wars', id), { name, from, to, prize: body.querySelector('#ww-prize').value, treasure: body.querySelector('#ww-tr').value.trim() || '天下の宝刀', by: user.uid, created: Date.now(), done: false });
-      warMsg = ''; E.sfx('levelup'); E.playCuts([['合戦開催', name, 'levelup']]);
+      warMsg = '';
     } catch (err) { warMsg = '開催できませんでした。Firestoreのルールを更新してください'; render(); }
   };
   body.querySelectorAll('[data-wdel]').forEach(b => b.onclick = async () => {
@@ -323,7 +323,18 @@ function start() {
   unsubs.push(onSnapshot(collection(db, 'members'), snap => {
     members = {}; snap.forEach(d => { members[d.id] = d.data(); });
     if (!members[user.uid]) return kicked('合戦から外れました。合言葉を入れれば再び参戦できます');
-    member = members[user.uid]; loaded.members = true; refresh();
+    member = members[user.uid]; loaded.members = true;
+    const kk = 'mce_war_known_' + user.uid; let known = null;
+    try { known = JSON.parse(ls.get(kk) || 'null'); } catch (e) {}
+    const ids = Object.keys(members);
+    if (known) {
+      const fresh = ids.filter(id => id !== user.uid && !known.includes(id));
+      fresh.forEach(id => addNews('参陣', pname(id) + '軍が参戦', ''));
+      if (fresh.length > 2) E.announce([['参陣', fresh.length + '軍が新たに参戦', 'levelup', fresh.map(pname).join('軍、') + '軍が参戦しました']]);
+      else if (fresh.length) E.announce(fresh.map(id => ['参陣', pname(id) + '軍が参戦！', 'levelup', pname(id) + '軍が、参戦しました']));
+    }
+    ls.set(kk, JSON.stringify(ids));
+    refresh();
   }, () => kicked('合戦の情報を読み込めませんでした')));
   unsubs.push(onSnapshot(collection(db, 'players'), snap => {
     players = {}; snap.forEach(d => { players[d.id] = d.data(); });
@@ -346,7 +357,18 @@ function start() {
   let warsFirst = true;
   unsubs.push(onSnapshot(collection(db, 'wars'), snap => {
     wars = {}; snap.forEach(d => { wars[d.id] = Object.assign({ id: d.id }, d.data()); });
-    finalizeWars(); announceWars(); refresh();
+    finalizeWars(); announceWars();
+    const wk = 'mce_war_wknown_' + user.uid; let wknown = null;
+    try { wknown = JSON.parse(ls.get(wk) || 'null'); } catch (e) {}
+    const wids = Object.keys(wars);
+    if (wknown) {
+      const fm = dk => +dk.slice(5, 7) + '/' + +dk.slice(8, 10);
+      const nw = wids.filter(id => !wknown.includes(id) && !wars[id].done);
+      nw.forEach(id => addNews('合戦', '「' + wars[id].name + '」開催（' + fm(wars[id].from) + '〜' + fm(wars[id].to) + '）', ''));
+      if (nw.length) E.announce(nw.map(id => ['合戦開催', wars[id].name + '（' + fm(wars[id].from) + '〜' + fm(wars[id].to) + '）', 'levelup', '合戦、' + wars[id].name + '、開催！']));
+    }
+    ls.set(wk, JSON.stringify(wids));
+    refresh();
     if (warsFirst) {
       warsFirst = false;
       const today = E.dayKey(Date.now()), w = Object.values(wars).find(x => !x.done && x.from <= today && today <= x.to);
@@ -395,7 +417,7 @@ async function join(name, color, code) {
     if (c && !c.exists()) await setDoc(doc(db, 'config', 'app'), { owner: user.uid }).catch(() => {});
     member = { code, name, color, joinedAt: Date.now() };
     joinMsg = ''; busy = false; start(); E.sfx('levelup');
-    E.playCuts([['参陣', name + '軍、出陣！', 'levelup']]);
+    E.announce([['参陣', name + '軍、出陣！', 'levelup', name + '軍、出陣！']]);
   } catch (e) {
     busy = false;
     joinMsg = e && e.code === 'permission-denied' ? '合言葉が違うか、参戦が許可されていません' : '参戦できませんでした。Firestoreの設定を確認してください（' + ((e && e.code) || 'error') + '）';

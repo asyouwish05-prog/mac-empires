@@ -674,7 +674,7 @@ function actx() {
     comp.threshold.value = -16; comp.knee.value = 8; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.2;
     master = ac.createGain(); master.gain.value = 1.0;
     master.connect(comp); comp.connect(ac.destination);
-    bgmBus = ac.createGain(); bgmBus.gain.value = 0.8; bgmBus.connect(master);
+    bgmBus = ac.createGain(); bgmBus.gain.value = 0.9; bgmBus.connect(master);
     noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.5, ac.sampleRate);
     const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     distCurve = new Float32Array(1024);
@@ -748,44 +748,114 @@ function horagai(t, v) {
   o.connect(fl); fl.connect(g); g.connect(bgmBus); o.start(t); lfo.start(t); o.stop(t + 1.65); lfo.stop(t + 1.65);
 }
 
-/* score: D 都節 (D Eb G A Bb), 136 BPM, 8 bars x 16 steps */
-const NOTE = { D2: 73.42, A1: 55, G1: 49, Bb1: 58.27, C2: 65.41, D3: 146.83, Eb3: 155.56, G3: 196, A3: 220, Bb3: 233.08, D4: 293.66, Eb4: 311.13, G4: 392, A4: 440, Bb4: 466.16, D5: 587.33, Eb5: 622.25 };
+/* score: 「出陣」— D minor, 168 BPM, 16 bars x 16 steps
+   A 0-3 drive (gallop bass + stabs) / B 4-7 theme / C 8-11 build (half-time, riser) / D 12-15 climax */
+const NOTE = {
+  A1: 55, Bb1: 58.27, C2: 65.41, D2: 73.42, F2: 87.31,
+  Bb3: 233.08, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392, A4: 440, Bb4: 466.16,
+  C5: 523.25, Cs5: 554.37, D5: 587.33, E5: 659.25, F5: 698.46, G5: 783.99, A5: 880
+};
+const CHORDS = ['D2', 'D2', 'Bb1', 'C2', 'D2', 'Bb1', 'C2', 'D2', 'F2', 'C2', 'Bb1', 'A1', 'D2', 'Bb1', 'C2', 'D2'];
 const LEAD = [
-  'D4 - - D4 - Eb4 - D4 - A3 - - Bb3 - A3 -',
-  'G3 - - A3 - - D4 - - - Eb4 - D4 - - -',
-  'D4 - - D4 - Eb4 - D4 - A3 - - Bb3 - A3 -',
-  'G3 - A3 - Bb3 - A3 - G3 - - - D3 - - -',
-  'D5 - - Bb4 - A4 - - G4 - A4 - Bb4 - A4 -',
-  'G4 - - D4 - - Eb4 - D4 - - - - - - -',
-  'D5 - - Bb4 - A4 - - G4 - A4 - D5 - Eb5 -',
-  'D5 - - - - - - - D4 D4 - D4 D4 - D4 -'
-].map(b => b.split(' '));
-const BASS = ['D2', 'D2', 'D2', 'A1', 'Bb1', 'G1', 'Bb1', 'D2'];
-const BPM = 136, STEP = 60 / BPM / 4;
+  '', 'D4 - D4 - F4 - D4 G4 - F4 - D4 - C4 - -', '', 'C4 - C4 - D4 - F4 - G4 - A4 - C5 - D5 -',
+  'D4 - - D4 A4 - - - G4 - A4 - F4 - - -', 'F4 - - G4 F4 - D4 - Bb3 - - - - - - -',
+  'C4 - - D4 F4 - G4 - A4 - G4 - F4 - E4 -', 'D4 - - - - - - - D4 - F4 - A4 - D5 -',
+  'F4 - - - - - - - A4 - - - C5 - - -', 'G4 - - - - - - - E4 - - - C4 - - -',
+  'D4 - - - F4 - - - Bb4 - - - D5 - - -', 'Cs5 - - - - - - - E5 - - - A4 - - -',
+  'D5 - - D5 A5 - - - G5 - A5 - F5 - - -', 'F5 - - G5 F5 - D5 - Bb4 - - - D5 - F5 -',
+  'G5 - - F5 E5 - - - C5 - D5 - E5 - G5 -', 'D5 - - - - - - - A4 - - - D5 - - -'
+].map(b => b ? b.split(' ') : []);
+const BPM = 168, STEP = 60 / BPM / 4;
 let bgmSched = null, nextT = 0, stepI = 0, loopN = 0;
+
+function brassLead(t, f, dur, v, bright) {
+  const o1 = ac.createOscillator(), o2 = ac.createOscillator(), vib = ac.createOscillator(), vg = ac.createGain();
+  const fl = ac.createBiquadFilter(), g = ac.createGain();
+  o1.type = 'sawtooth'; o2.type = 'square'; o1.frequency.value = f; o2.frequency.value = f; o2.detune.value = 7;
+  vib.frequency.value = 5.8; vg.gain.value = 0; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * 0.012, t + Math.min(dur, 0.6));
+  vib.connect(vg); vg.connect(o1.frequency); vg.connect(o2.frequency);
+  fl.type = 'lowpass'; fl.Q.value = 2;
+  fl.frequency.setValueAtTime(600, t); fl.frequency.exponentialRampToValueAtTime(bright, t + 0.06); fl.frequency.exponentialRampToValueAtTime(bright * 0.6, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.025); g.gain.setValueAtTime(v * 0.85, t + Math.max(0.03, dur - 0.05)); g.gain.exponentialRampToValueAtTime(0.0008, t + dur + 0.08);
+  o1.connect(fl); o2.connect(fl); fl.connect(g); g.connect(bgmBus);
+  [o1, o2, vib].forEach(o => { o.start(t); o.stop(t + dur + 0.12); });
+}
+function powerChord(t, f, v, len) {
+  const ws = ac.createWaveShaper(); ws.curve = distCurve; ws.oversample = '2x';
+  const fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.Q.value = 1.5;
+  fl.frequency.setValueAtTime(3200, t); fl.frequency.exponentialRampToValueAtTime(1100, t + len);
+  const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0008, t + len);
+  [1, 1.4983, 2, 3].forEach((m, i) => {
+    const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * m; o.detune.value = [0, 8, -6, 4][i];
+    o.connect(ws); o.start(t); o.stop(t + len + 0.05);
+  });
+  ws.connect(fl); fl.connect(g); g.connect(bgmBus);
+}
+function gallop(t, f, v, len) {
+  const o = ac.createOscillator(), o2 = ac.createOscillator(), ws = ac.createWaveShaper(), fl = ac.createBiquadFilter(), g = ac.createGain();
+  o.type = 'sawtooth'; o2.type = 'square'; o.frequency.value = f; o2.frequency.value = f / 2;
+  ws.curve = distCurve; fl.type = 'lowpass'; fl.frequency.setValueAtTime(900, t); fl.frequency.exponentialRampToValueAtTime(260, t + len); fl.Q.value = 4;
+  env(g, t, v, 0.003, len);
+  o.connect(ws); o2.connect(ws); ws.connect(fl); fl.connect(g); g.connect(bgmBus);
+  o.start(t); o2.start(t); o.stop(t + len + 0.05); o2.stop(t + len + 0.05);
+}
+function clap(t, v) { [0, 0.012, 0.025].forEach(d => noise(t + d, 0.06, 'bandpass', 1500, 1.2, v, bgmBus)); }
+function dora(t, v) {
+  noise(t, 2.2, 'lowpass', 2600, 0.6, v * 0.5, bgmBus);
+  [110, 164, 237, 311].forEach((f, i) => {
+    const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(f * 1.02, t); o.frequency.exponentialRampToValueAtTime(f, t + 1.2);
+    env(g, t, v / (i + 1.5), 0.004, 2.4); o.connect(g); g.connect(bgmBus); o.start(t); o.stop(t + 2.5);
+  });
+}
+function riser(t, len, v) {
+  const n = ac.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
+  const f = ac.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 3; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(6000, t + len);
+  const g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + len); g.gain.exponentialRampToValueAtTime(0.0008, t + len + 0.05);
+  n.connect(f); f.connect(g); g.connect(bgmBus); n.start(t); n.stop(t + len + 0.1);
+}
+
 function playStep(i, t) {
-  const bar = i >> 4, s = i & 15, fill = bar === 3 || bar === 7, big = bar >= 4;
-  // odaiko
-  if (fill ? [0, 4, 8, 10, 12, 13, 14, 15].includes(s) : [0, 6, 8].includes(s)) odaiko(t, s === 0 ? 1 : fill && s > 11 ? 0.75 : 0.85);
-  // shime-daiko on eighths, accents on beats
-  if (s % 2 === 0) shime(t, s % 4 === 0 ? 0.32 : 0.16);
-  if (big && s % 4 === 2) shime(t + STEP * 0.5, 0.1);
-  // kane (hand gong) on off-beats in the high section
-  if (big && (s === 4 || s === 12)) kane(t, 0.07);
-  // bass on eighths with octave pops
-  if (s % 2 === 0) { const f = NOTE[BASS[bar]]; bassNote(t, s % 8 === 4 ? f * 2 : f, 0.55); }
-  // lead
-  const n = LEAD[bar][s]; if (n && n !== '-') shamisen(t, NOTE[n], big ? 0.34 : 0.3);
-  // power stabs in the high section
-  if ((bar === 4 || bar === 6) && (s === 0 || s === 6)) stab(t, NOTE[BASS[bar]] * 4, 0.22, s === 0 ? 0.5 : 0.25);
-  if (bar === 7 && s === 0) stab(t, NOTE.D2 * 4, 0.24, 0.9);
-  // conch horn opens every other loop
-  if (i === 0 && loopN % 2 === 0) horagai(t, 0.2);
+  const bar = i >> 4, s = i & 15, sec = bar >> 2, root = NOTE[CHORDS[bar]], beat = s % 4 === 0;
+  // ---- drums ----
+  if (sec === 2) {
+    if (s === 0 || s === 8) odaiko(t, 1);
+    if (s % 2 === 0) shime(t, s % 8 === 4 ? 0.34 : 0.14);
+    if (bar === 11) { odaiko(t, 0.25 + s * 0.05); shime(t, 0.1 + s * 0.02); }
+  } else {
+    const hits = sec === 3 ? [0, 4, 6, 8, 10, 12, 14] : [0, 6, 8, 11, 14];
+    if (hits.includes(s)) odaiko(t, beat ? 1 : 0.8);
+    if (bar % 4 === 3 && s >= 12) odaiko(t, 0.7 + (s - 12) * 0.08);
+    shime(t, beat ? 0.36 : s % 2 === 0 ? 0.2 : 0.11);
+    if (sec >= 1 && (s === 4 || s === 12)) clap(t, 0.32);
+    if (sec === 3 && (s === 4 || s === 12)) kane(t, 0.09);
+  }
+  if (s === 0 && (bar === 0 || bar === 12)) dora(t, bar === 12 ? 0.5 : 0.35);
+  if (bar === 11 && s === 0) riser(t, STEP * 16, 0.22);
+  if (i === 0 && loopN % 2 === 0) horagai(t, 0.22);
+  // ---- bass ----
+  if (sec === 2) { if (s === 0 || s === 8) gallop(t, root, 0.5, STEP * 7.5); }
+  else if ([0, 2, 3].includes(s % 4)) gallop(t, root, s % 4 === 0 ? 0.62 : 0.44, STEP * 0.9);
+  // ---- power chords ----
+  if (sec === 2) { if (s === 0) powerChord(t, root * 2, 0.16, STEP * 15); }
+  else if (s === 0) powerChord(t, root * 2, sec === 3 ? 0.24 : 0.2, STEP * 5);
+  else if (s === 10 && sec !== 1) powerChord(t, root * 2, 0.16, STEP * 3);
+  // ---- lead ----
+  const L = LEAD[bar], n = L[s];
+  if (n && n !== '-') {
+    let len = 1; while (s + len < 16 && L[s + len] === '-') len++;
+    const dur = STEP * len * 0.95, f = NOTE[n];
+    if (sec === 0) shamisen(t, f, 0.32);
+    else {
+      brassLead(t, f, dur, sec === 3 ? 0.22 : 0.2, sec === 3 ? 3400 : 2600);
+      if (sec === 3) brassLead(t, f / 2, dur, 0.12, 1800);
+      if (sec === 1) shamisen(t, f, 0.16);
+    }
+  }
 }
 function bgmTick() {
   while (nextT < ac.currentTime + 0.15) {
     playStep(stepI, nextT);
-    nextT += STEP; stepI = (stepI + 1) % 128; if (stepI === 0) loopN++;
+    nextT += STEP; stepI = (stepI + 1) % 256; if (stepI === 0) loopN++;
   }
 }
 function sfx(kind) {
@@ -798,14 +868,51 @@ function sfx(kind) {
     if (navigator.vibrate) navigator.vibrate(kind === 'levelup' || kind === 'treasure' ? [50, 30, 110] : kind === 'attack' ? 40 : 12);
   } catch (e) {}
 }
-$('#b-bgm').addEventListener('click', () => {
-  const b = $('#b-bgm');
-  if (bgmSched) { clearInterval(bgmSched); bgmSched = null; b.classList.remove('on'); return; }
-  if (!actx()) return;
-  b.classList.add('on');
+function bgmStart() {
+  if (bgmSched || !actx()) return;
+  $('#b-bgm').classList.add('on');
   nextT = ac.currentTime + 0.08; stepI = 0;
   bgmSched = setInterval(bgmTick, 25); bgmTick();
+}
+function bgmStop() { if (bgmSched) { clearInterval(bgmSched); bgmSched = null; } $('#b-bgm').classList.remove('on'); }
+$('#b-bgm').addEventListener('click', () => {
+  if (bgmSched) { bgmStop(); lsSet('mce_bgm', '0'); }
+  else { bgmStart(); lsSet('mce_bgm', '1'); }
 });
+// Browsers only allow sound after the first touch, so BGM starts on the first tap anywhere unless it was turned off.
+function armAutoBgm() {
+  if (lsGet('mce_bgm') === '0') return;
+  const go = e => {
+    if (e && e.target && e.target.closest && e.target.closest('#b-bgm')) return;
+    ['pointerdown', 'keydown'].forEach(n => document.removeEventListener(n, go, true));
+    if (lsGet('mce_bgm') !== '0') bgmStart();
+  };
+  ['pointerdown', 'keydown'].forEach(n => document.addEventListener(n, go, true));
+}
+armAutoBgm();
+document.addEventListener('visibilitychange', () => { if (!ac) return; if (document.hidden) ac.suspend(); else ac.resume(); });
+
+/* ---------- announcements (cut-in + ticker + voice) ---------- */
+let jpVoice = null;
+function pickVoice() { try { const vs = speechSynthesis.getVoices(); jpVoice = vs.find(v => /ja[-_]JP/i.test(v.lang)) || null; } catch (e) {} }
+if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function speak(text) {
+  if (lsGet('mce_voice') === '0' || !('speechSynthesis' in window)) return;
+  try {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP'; if (jpVoice) u.voice = jpVoice; u.rate = 1.05; u.pitch = 0.85; u.volume = 1;
+    u.onstart = () => { if (bgmBus) bgmBus.gain.setTargetAtTime(0.3, ac.currentTime, 0.1); };
+    u.onend = u.onerror = () => { if (bgmBus && !speechSynthesis.speaking) bgmBus.gain.setTargetAtTime(0.9, ac.currentTime, 0.3); };
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function announce(list) {
+  // list: [[eyebrow, text, sound, spokenText?], ...]
+  if (!list.length) return;
+  playCuts(list.map(a => [a[0], a[1], a[2]]));
+  say('【' + list[list.length - 1][0] + '】' + list[list.length - 1][1], 'good');
+  list.forEach(a => speak(a[3] || (a[0] + '。' + a[1])));
+}
 
 /* ---------- ticker & header ---------- */
 let tickTimer = null;
@@ -1295,12 +1402,15 @@ function renderMenu() {
   } else if (tab === 'data') {
     body.innerHTML =
       '<div><h3>地図</h3><p class="note">現在の地図：<b style="color:var(--paper)">' + mapStatus + '</b>。GoogleマップのAPIキーはこの端末にだけ保存されます。</p><input type="text" id="gk" placeholder="AIza…" autocomplete="off" spellcheck="false" style="margin-top:8px;font-size:12px"><div class="row" style="margin-top:8px"><button class="primary" id="gk-save">保存して再読み込み</button>' + (lsGet(GKEY) ? '<button class="ghost" id="gk-del">キーを削除</button>' : '') + '</div></div>' +
+      '<div><h3>音と読み上げ</h3><div class="row"><button class="ghost" id="st-bgm">BGM：' + (lsGet('mce_bgm') === '0' ? '起動時は鳴らさない' : '起動時に鳴らす') + '</button><button class="ghost" id="st-voice">戦況の読み上げ：' + (lsGet('mce_voice') === '0' ? 'オフ' : 'オン') + '</button></div><p class="note" style="margin-top:6px">BGMは最初に画面に触れたときに始まります（ブラウザの決まりで、触れる前は音を出せません）。読み上げは、参戦や城の奪い合いを声で知らせます。</p></div>' +
       '<div><h3>保存先</h3><p class="note">現在の保存先：<b style="color:var(--paper)">' + storeMode + '</b>。出陣は記録した瞬間に保存されます。</p></div>' +
       '<div><h3>書き出し</h3><p class="note">別の端末やホーム画面版へ戦歴を引き継ぐときに使います。</p><textarea id="ex" readonly style="min-height:80px;font-size:11px"></textarea><div class="row" style="margin-top:8px"><button class="primary" id="ex-copy">コピー</button><span class="note" id="ex-msg"></span></div></div>' +
       '<div><h3>読み込み</h3><p class="note">書き出した記録を貼り付けて読み込むと、今の戦歴は置き換わります。</p><textarea id="im" placeholder="ここに貼り付け" style="min-height:70px;font-size:11px"></textarea><div class="row" style="margin-top:8px"><button class="ghost" id="im-go">読み込む</button><span class="note" id="im-msg"></span></div></div>' +
       '<div><h3>天下布武やり直し</h3><p class="note">すべての城と戦歴を初期状態に戻します。元に戻せません。</p><div class="row" style="margin-top:8px"><button class="ghost danger" id="rs">' + ['全データを消去する', '本当に消去しますか？', '最終確認：押すと消去'][resetStage] + '</button>' + (resetStage ? '<button class="ghost" id="rs-no">やめる</button>' : '') + '</div></div>';
     $('#ex').value = JSON.stringify(state);
     $('#gk').value = lsGet(GKEY) || '';
+    $('#st-bgm').onclick = () => { const off = lsGet('mce_bgm') !== '0'; lsSet('mce_bgm', off ? '0' : '1'); if (off) bgmStop(); else bgmStart(); renderMenu(); };
+    $('#st-voice').onclick = () => { const off = lsGet('mce_voice') !== '0'; lsSet('mce_voice', off ? '0' : '1'); if (!off) speak('読み上げをオンにしました'); renderMenu(); };
     $('#gk-save').onclick = () => { const v = $('#gk').value.trim(); if (!v) return; lsSet(GKEY, v); location.reload(); };
     const gd = $('#gk-del'); if (gd) gd.onclick = () => { try { localStorage.removeItem(GKEY); } catch (e) {} location.reload(); };
     $('#ex-copy').onclick = () => {
@@ -1464,7 +1574,7 @@ function maybeReport(tries) {
 window.EMP = {
   get state() { return state; }, get D() { return D; }, get S() { return S; }, get selected() { return selected; }, get tab() { return tab; },
   LEVELS, lvOf, dayKey, esc, DAY, GUARD, toXY, MENUS,
-  draw, say, playCuts, select, byId, renderSheet, renderMenu, refreshHeader, recompute, save, sfx,
+  draw, say, playCuts, announce, speak, select, byId, renderSheet, renderMenu, refreshHeader, recompute, save, sfx,
   menuOpen: () => !$('#menu').hidden,
   showModal, formationOf, monthKey, shiftMonth, ymLabel,
   syncStores(list) {
