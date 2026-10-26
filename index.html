@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache">
 <meta name="theme-color" content="#1b1712">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -12,6 +13,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
+<script>window.EMP_BUILD="20261026221800";</script>
 </head>
 <body>
 <title>McDonald's EMPIRES</title>
@@ -1606,6 +1608,22 @@ window.EMP = {
   }
 };
 
+/* ---------- self-update (GitHub Pages build only) ---------- */
+// The Pages build sets window.EMP_BUILD and publishes version.json; when they differ, reload past the browser cache.
+function checkUpdate() {
+  if (!window.EMP_BUILD) return;
+  fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(v => {
+    if (!v || !v.build || v.build === window.EMP_BUILD) return;
+    let tried = null; try { tried = sessionStorage.getItem('mce_upd'); } catch (e) {}
+    if (tried === v.build) return;
+    try { sessionStorage.setItem('mce_upd', v.build); } catch (e) {}
+    say('新しい版に更新しています…', 'good');
+    setTimeout(() => location.replace(location.pathname + '?v=' + v.build), 600);
+  }).catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+setTimeout(checkUpdate, 1500);
+
 /* ---------- boot ---------- */
 recompute();
 new ResizeObserver(resize).observe($('#wrap'));
@@ -1618,6 +1636,6 @@ startGeo();
 })();
 </script>
 
-<script type="module" src="war.js"></script>
+<script type="module" src="war.js?v=20261026221800"></script>
 </body>
 </html>
