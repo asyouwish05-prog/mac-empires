@@ -13,7 +13,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
-<script>window.EMP_BUILD="20261026221800";</script>
+<script>window.EMP_BUILD="20261028135849";</script>
 </head>
 <body>
 <title>McDonald's EMPIRES</title>
@@ -870,15 +870,54 @@ function sfx(kind) {
     if (navigator.vibrate) navigator.vibrate(kind === 'levelup' || kind === 'treasure' ? [50, 30, 110] : kind === 'attack' ? 40 : 12);
   } catch (e) {}
 }
-function bgmStart() {
-  if (bgmSched || !actx()) return;
-  $('#b-bgm').classList.add('on');
-  nextT = ac.currentTime + 0.08; stepI = 0;
-  bgmSched = setInterval(bgmTick, 25); bgmTick();
+/* Recorded track (GitHub Pages ships bgm-shutsujin.m4a next to the page); the synth score is the fallback. */
+const TRACKS = {
+  suno: { name: '出陣（Suno版）', src: 'bgm-shutsujin.m4a', vol: 0.55 },
+  synth: { name: '出陣（自動演奏）' }
+};
+let bgmOn = false, trackBuf = null, trackLoad = null, trackSrc = null, trackGain = null, ducked = false;
+const bgmChoice = () => TRACKS[lsGet('mce_bgm_track')] ? lsGet('mce_bgm_track') : 'suno';
+const trackFetch = fetch(TRACKS.suno.src).then(r => { if (!r.ok) throw new Error('missing'); return r.arrayBuffer(); }).catch(() => null);
+function loadTrack() {
+  if (trackBuf) return Promise.resolve(trackBuf);
+  if (!trackLoad) trackLoad = trackFetch.then(b => {
+    if (!b) throw new Error('missing');
+    return new Promise((res, rej) => ac.decodeAudioData(b.slice(0), res, rej));
+  }).then(buf => (trackBuf = buf)).catch(e => { trackLoad = null; throw e; });
+  return trackLoad;
 }
-function bgmStop() { if (bgmSched) { clearInterval(bgmSched); bgmSched = null; } $('#b-bgm').classList.remove('on'); }
+function startSynth() { nextT = ac.currentTime + 0.08; stepI = 0; bgmSched = setInterval(bgmTick, 25); bgmTick(); }
+function startTrack(buf) {
+  const vol = TRACKS.suno.vol;
+  trackGain = ac.createGain(); trackGain.gain.setValueAtTime(0.0001, ac.currentTime);
+  trackGain.gain.exponentialRampToValueAtTime(ducked ? vol * 0.3 : vol, ac.currentTime + 0.8);
+  trackSrc = ac.createBufferSource(); trackSrc.buffer = buf; trackSrc.loop = true;
+  trackSrc.connect(trackGain); trackGain.connect(ac.destination); trackSrc.start();
+}
+function bgmStart() {
+  if (bgmOn || !actx()) return;
+  bgmOn = true; $('#b-bgm').classList.add('on');
+  if (bgmChoice() === 'suno') {
+    loadTrack().then(buf => { if (bgmOn && !trackSrc && !bgmSched) startTrack(buf); })
+      .catch(() => { if (bgmOn && !bgmSched) { startSynth(); say('曲ファイルを読み込めなかったため、自動演奏で流しています', 'warn'); } });
+  } else startSynth();
+}
+function bgmStop() {
+  bgmOn = false;
+  if (bgmSched) { clearInterval(bgmSched); bgmSched = null; }
+  if (trackSrc) {
+    const s0 = trackSrc, g0 = trackGain; trackSrc = null; trackGain = null;
+    try { g0.gain.setTargetAtTime(0.0001, ac.currentTime, 0.15); s0.stop(ac.currentTime + 0.6); } catch (e) {}
+  }
+  $('#b-bgm').classList.remove('on');
+}
+function duck(on) {
+  ducked = on; if (!ac) return;
+  if (bgmBus) bgmBus.gain.setTargetAtTime(on ? 0.3 : 0.9, ac.currentTime, on ? 0.1 : 0.3);
+  if (trackGain) trackGain.gain.setTargetAtTime(TRACKS.suno.vol * (on ? 0.3 : 1), ac.currentTime, on ? 0.1 : 0.3);
+}
 $('#b-bgm').addEventListener('click', () => {
-  if (bgmSched) { bgmStop(); lsSet('mce_bgm', '0'); }
+  if (bgmOn) { bgmStop(); lsSet('mce_bgm', '0'); }
   else { bgmStart(); lsSet('mce_bgm', '1'); }
 });
 // Browsers only allow sound after the first touch, so BGM starts on the first tap anywhere unless it was turned off.
@@ -903,8 +942,8 @@ function speak(text) {
   try {
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ja-JP'; if (jpVoice) u.voice = jpVoice; u.rate = 1.05; u.pitch = 0.85; u.volume = 1;
-    u.onstart = () => { if (bgmBus) bgmBus.gain.setTargetAtTime(0.3, ac.currentTime, 0.1); };
-    u.onend = u.onerror = () => { if (bgmBus && !speechSynthesis.speaking) bgmBus.gain.setTargetAtTime(0.9, ac.currentTime, 0.3); };
+    u.onstart = () => duck(true);
+    u.onend = u.onerror = () => { if (!speechSynthesis.speaking) duck(false); };
     speechSynthesis.speak(u);
   } catch (e) {}
 }
@@ -1404,13 +1443,14 @@ function renderMenu() {
   } else if (tab === 'data') {
     body.innerHTML =
       '<div><h3>地図</h3><p class="note">現在の地図：<b style="color:var(--paper)">' + mapStatus + '</b>。GoogleマップのAPIキーはこの端末にだけ保存されます。</p><input type="text" id="gk" placeholder="AIza…" autocomplete="off" spellcheck="false" style="margin-top:8px;font-size:12px"><div class="row" style="margin-top:8px"><button class="primary" id="gk-save">保存して再読み込み</button>' + (lsGet(GKEY) ? '<button class="ghost" id="gk-del">キーを削除</button>' : '') + '</div></div>' +
-      '<div><h3>音と読み上げ</h3><div class="row"><button class="ghost" id="st-bgm">BGM：' + (lsGet('mce_bgm') === '0' ? '起動時は鳴らさない' : '起動時に鳴らす') + '</button><button class="ghost" id="st-voice">戦況の読み上げ：' + (lsGet('mce_voice') === '0' ? 'オフ' : 'オン') + '</button></div><p class="note" style="margin-top:6px">BGMは最初に画面に触れたときに始まります（ブラウザの決まりで、触れる前は音を出せません）。読み上げは、参戦や城の奪い合いを声で知らせます。</p></div>' +
+      '<div><h3>音と読み上げ</h3><div class="row"><button class="ghost" id="st-track">曲：' + TRACKS[bgmChoice()].name + '</button><button class="ghost" id="st-bgm">BGM：' + (lsGet('mce_bgm') === '0' ? '起動時は鳴らさない' : '起動時に鳴らす') + '</button><button class="ghost" id="st-voice">戦況の読み上げ：' + (lsGet('mce_voice') === '0' ? 'オフ' : 'オン') + '</button></div><p class="note" style="margin-top:6px">BGMは最初に画面に触れたときに始まります（ブラウザの決まりで、触れる前は音を出せません）。読み上げは、参戦や城の奪い合いを声で知らせます。</p></div>' +
       '<div><h3>保存先</h3><p class="note">現在の保存先：<b style="color:var(--paper)">' + storeMode + '</b>。出陣は記録した瞬間に保存されます。</p></div>' +
       '<div><h3>書き出し</h3><p class="note">別の端末やホーム画面版へ戦歴を引き継ぐときに使います。</p><textarea id="ex" readonly style="min-height:80px;font-size:11px"></textarea><div class="row" style="margin-top:8px"><button class="primary" id="ex-copy">コピー</button><span class="note" id="ex-msg"></span></div></div>' +
       '<div><h3>読み込み</h3><p class="note">書き出した記録を貼り付けて読み込むと、今の戦歴は置き換わります。</p><textarea id="im" placeholder="ここに貼り付け" style="min-height:70px;font-size:11px"></textarea><div class="row" style="margin-top:8px"><button class="ghost" id="im-go">読み込む</button><span class="note" id="im-msg"></span></div></div>' +
       '<div><h3>天下布武やり直し</h3><p class="note">すべての城と戦歴を初期状態に戻します。元に戻せません。</p><div class="row" style="margin-top:8px"><button class="ghost danger" id="rs">' + ['全データを消去する', '本当に消去しますか？', '最終確認：押すと消去'][resetStage] + '</button>' + (resetStage ? '<button class="ghost" id="rs-no">やめる</button>' : '') + '</div></div>';
     $('#ex').value = JSON.stringify(state);
     $('#gk').value = lsGet(GKEY) || '';
+    $('#st-track').onclick = () => { const next = bgmChoice() === 'suno' ? 'synth' : 'suno'; lsSet('mce_bgm_track', next); const was = bgmOn; bgmStop(); if (was) setTimeout(bgmStart, 650); renderMenu(); };
     $('#st-bgm').onclick = () => { const off = lsGet('mce_bgm') !== '0'; lsSet('mce_bgm', off ? '0' : '1'); if (off) bgmStop(); else bgmStart(); renderMenu(); };
     $('#st-voice').onclick = () => { const off = lsGet('mce_voice') !== '0'; lsSet('mce_voice', off ? '0' : '1'); if (!off) speak('読み上げをオンにしました'); renderMenu(); };
     $('#gk-save').onclick = () => { const v = $('#gk').value.trim(); if (!v) return; lsSet(GKEY, v); location.reload(); };
@@ -1636,6 +1676,6 @@ startGeo();
 })();
 </script>
 
-<script type="module" src="war.js?v=20261026221800"></script>
+<script type="module" src="war.js?v=20261028135849"></script>
 </body>
 </html>
