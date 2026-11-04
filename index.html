@@ -13,7 +13,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
-<script>window.EMP_BUILD="20261104140014";</script>
+<script>window.EMP_BUILD="20261104141334";</script>
 </head>
 <body>
 <title>McDonald's EMPIRES</title>
@@ -333,7 +333,16 @@ const DEF_STORES = [
 /* ---------- state & storage ---------- */
 const KEY = 'mce_v2';
 const fresh = () => ({ v: 2, start: Date.now(), updated: 0, stores: DEF_STORES.map(s => ({ ...s })), log: [], events: [] });
-const norm = o => { if (!Array.isArray(o.events)) o.events = []; return o; };
+const norm = o => {
+  if (!Array.isArray(o.events)) o.events = [];
+  if (!o.del || typeof o.del !== 'object') o.del = {};
+  ['log', 'stores', 'events'].forEach(k => { if (!Array.isArray(o.del[k])) o.del[k] = []; });
+  if (!o.resetAt) o.resetAt = 0;
+  return o;
+};
+// Tombstones let a deletion on one device win over the copy still held by the cloud backup or another device.
+const logKey = e => e.s + '|' + e.t;
+function tomb(kind, key) { const a = state.del[kind]; if (!a.includes(key)) a.push(key); if (a.length > 600) a.splice(0, a.length - 600); }
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function valid(o) { return o && Array.isArray(o.stores) && Array.isArray(o.log); }
@@ -1072,6 +1081,8 @@ function renderSheet() {
   $('#sh-remove').onclick = () => {
     if (!removeArm) { removeArm = true; renderSheet(); return; }
     shareStore(s, true);
+    tomb('stores', s.id);
+    state.log.filter(e => e.s === s.id).forEach(e => tomb('log', logKey(e)));
     state.stores = state.stores.filter(x => x.id !== s.id);
     state.log = state.log.filter(e => e.s !== s.id);
     save(); recompute(); refreshHeader(); closeSheet(); say('「' + s.name + '」を地図から外しました', 'good');
@@ -1108,7 +1119,7 @@ function invade(k) {
 function undo() {
   const e = state.log[state.log.length - 1];
   if (!e || Date.now() > undoUntil) return;
-  state.log.pop(); undoUntil = 0; save(); recompute(); refreshHeader(); renderSheet(); draw();
+  tomb('log', logKey(e)); state.log.pop(); undoUntil = 0; save(); recompute(); refreshHeader(); renderSheet(); draw();
   say('直前の出陣を取り消しました', 'good');
 }
 let cutQ = [], cutBusy = false;
@@ -1368,7 +1379,7 @@ function renderMenu() {
     body.querySelectorAll('.hdel').forEach(b => b.onclick = () => {
       const i = +b.dataset.i;
       if (delArm !== i) { delArm = i; renderMenu(); return; }
-      state.log.splice(i, 1); delArm = -1; undoUntil = 0; save(); recompute(); refreshHeader(); draw(); renderMenu();
+      if (state.log[i]) tomb('log', logKey(state.log[i])); state.log.splice(i, 1); delArm = -1; undoUntil = 0; save(); recompute(); refreshHeader(); draw(); renderMenu();
     });
     const more = $('#h-more'); if (more) more.onclick = () => { histDays += 30; renderMenu(); };
   } else if (tab === 'event') {
@@ -1408,7 +1419,7 @@ function renderMenu() {
     body.querySelectorAll('[data-evdel]').forEach(b => b.onclick = () => {
       const id = b.dataset.evdel;
       if (evDelArm !== id) { evDelArm = id; renderMenu(); return; }
-      state.events = state.events.filter(ev => ev.id !== id); evDelArm = null; save(); renderMenu(); idleTicker(); if (selected) renderSheet();
+      tomb('events', id); state.events = state.events.filter(ev => ev.id !== id); evDelArm = null; save(); renderMenu(); idleTicker(); if (selected) renderSheet();
     });
   } else if (tab === 'month') {
     const now = new Date(), months = [];
@@ -1445,7 +1456,8 @@ function renderMenu() {
     body.innerHTML =
       '<div><h3>地図</h3><p class="note">現在の地図：<b style="color:var(--paper)">' + mapStatus + '</b>。GoogleマップのAPIキーはこの端末にだけ保存されます。</p><input type="text" id="gk" placeholder="AIza…" autocomplete="off" spellcheck="false" style="margin-top:8px;font-size:12px"><div class="row" style="margin-top:8px"><button class="primary" id="gk-save">保存して再読み込み</button>' + (lsGet(GKEY) ? '<button class="ghost" id="gk-del">キーを削除</button>' : '') + '</div></div>' +
       '<div><h3>音と読み上げ</h3><div class="row"><button class="ghost" id="st-track">曲：' + TRACKS[bgmChoice()].name + '</button><button class="ghost" id="st-bgm">BGM：' + (lsGet('mce_bgm') === '0' ? '起動時は鳴らさない' : '起動時に鳴らす') + '</button><button class="ghost" id="st-voice">戦況の読み上げ：' + (lsGet('mce_voice') === '0' ? 'オフ' : 'オン') + '</button></div><p class="note" style="margin-top:6px">BGMは最初に画面に触れたときに始まります（ブラウザの決まりで、触れる前は音を出せません）。読み上げは、参戦や城の奪い合いを声で知らせます。</p></div>' +
-      '<div><h3>保存先</h3><p class="note">現在の保存先：<b style="color:var(--paper)">' + storeMode + '</b>。出陣は記録した瞬間に保存されます。</p></div>' +
+      '<div><h3>保存先</h3><p class="note">現在の保存先：<b style="color:var(--paper)">' + storeMode + '</b>。出陣は記録した瞬間に保存されます。</p>' +
+        (window.EMP_WAR ? '<p class="note" style="margin-top:6px">' + EMP_WAR.backupStatus() + '</p>' : '') + '</div>' +
       '<div><h3>書き出し</h3><p class="note">別の端末やホーム画面版へ戦歴を引き継ぐときに使います。</p><textarea id="ex" readonly style="min-height:80px;font-size:11px"></textarea><div class="row" style="margin-top:8px"><button class="primary" id="ex-copy">コピー</button><span class="note" id="ex-msg"></span></div></div>' +
       '<div><h3>読み込み</h3><p class="note">書き出した記録を貼り付けて読み込むと、今の戦歴は置き換わります。</p><textarea id="im" placeholder="ここに貼り付け" style="min-height:70px;font-size:11px"></textarea><div class="row" style="margin-top:8px"><button class="ghost" id="im-go">読み込む</button><span class="note" id="im-msg"></span></div></div>' +
       '<div><h3>天下布武やり直し</h3><p class="note">すべての城と戦歴を初期状態に戻します。元に戻せません。</p><div class="row" style="margin-top:8px"><button class="ghost danger" id="rs">' + ['全データを消去する', '本当に消去しますか？', '最終確認：押すと消去'][resetStage] + '</button>' + (resetStage ? '<button class="ghost" id="rs-no">やめる</button>' : '') + '</div></div>';
@@ -1465,13 +1477,13 @@ function renderMenu() {
       try {
         const o = JSON.parse($('#im').value);
         if (!valid(o)) throw 0;
-        state = norm(o); save(); recompute(); refreshHeader(); closeSheet(); fitAll(false);
+        state = norm(o); state.resetAt = Date.now(); save(); recompute(); refreshHeader(); closeSheet(); fitAll(false);
         $('#im-msg').textContent = '読み込みました（' + o.stores.length + '城・' + o.log.length + '戦）';
       } catch (e) { $('#im-msg').textContent = '形式が正しくありません。書き出した文字列をそのまま貼り付けてください'; }
     };
     $('#rs').onclick = () => {
       if (resetStage < 2) { resetStage++; renderMenu(); return; }
-      state = fresh(); save(); recompute(); refreshHeader(); closeSheet(); resetStage = 0; $('#menu').hidden = true; fitAll(true);
+      state = norm(fresh()); state.resetAt = Date.now(); save(); recompute(); refreshHeader(); closeSheet(); resetStage = 0; $('#menu').hidden = true; fitAll(true);
       say('天下布武をやり直しました', 'good');
     };
     const no = $('#rs-no'); if (no) no.onclick = () => { resetStage = 0; renderMenu(); };
@@ -1724,6 +1736,39 @@ window.EMP = {
   draw, say, playCuts, announce, speak, select, byId, renderSheet, renderMenu, refreshHeader, recompute, save, sfx,
   menuOpen: () => !$('#menu').hidden,
   showModal, formationOf, monthKey, shiftMonth, ymLabel,
+  exportState() { return JSON.stringify(state); },
+  // Merge a backup (from the cloud or another device). Returns the number of sorties added (or -1 when the backup replaced everything).
+  mergeState(r) {
+    if (!valid(r)) return 0;
+    norm(r);
+    if (r.resetAt > state.resetAt) {
+      state = r; lsSet(KEY, JSON.stringify(state)); recompute(); refreshHeader(); closeSheet(); draw();
+      return -1;
+    }
+    if (state.resetAt > r.resetAt) return 0;
+    let added = 0, ch = false;
+    ['log', 'stores', 'events'].forEach(k => r.del[k].forEach(x => { if (!state.del[k].includes(x)) { state.del[k].push(x); ch = true; } }));
+    const dl = new Set(state.del.log), ds = new Set(state.del.stores), de = new Set(state.del.events);
+    const before = state.log.length;
+    state.log = state.log.filter(e => !dl.has(logKey(e)));
+    state.stores = state.stores.filter(x => !ds.has(x.id));
+    state.events = state.events.filter(x => !de.has(x.id));
+    if (state.log.length !== before) ch = true;
+    const have = new Set(state.log.map(logKey));
+    r.log.forEach(e => { const k = logKey(e); if (!have.has(k) && !dl.has(k)) { state.log.push(e); have.add(k); added++; } });
+    if (added) state.log.sort((a, b) => a.t - b.t);
+    r.stores.forEach(rs => {
+      if (ds.has(rs.id)) return;
+      const s0 = byId(rs.id);
+      if (!s0) { state.stores.push(rs); ch = true; }
+      else if ((rs.e || 0) > (s0.e || 0)) { Object.assign(s0, rs); ch = true; }
+      else if (rs.memo && !s0.memo) { s0.memo = rs.memo; ch = true; }
+    });
+    r.events.forEach(ev => { if (!de.has(ev.id) && !state.events.some(x => x.id === ev.id)) { state.events.push(ev); ch = true; } });
+    if (r.start && r.start < state.start) { state.start = r.start; ch = true; }
+    if (added || ch) { lsSet(KEY, JSON.stringify(state)); recompute(); refreshHeader(); draw(); if (selected) renderSheet(); }
+    return added;
+  },
   syncStores(list) {
     let ch = 0;
     list.forEach(c => {
@@ -1781,6 +1826,6 @@ if (lsGet('mce_tut_done') === '1') startGeo();
 })();
 </script>
 
-<script type="module" src="war.js?v=20261104140014"></script>
+<script type="module" src="war.js?v=20261104141334"></script>
 </body>
 </html>

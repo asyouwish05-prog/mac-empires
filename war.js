@@ -28,6 +28,7 @@ const ls = { get(k) { try { return localStorage.getItem(k); } catch (e) { return
 let user = null, member = null, members = {}, players = {}, conf = {}, unsubs = [];
 let phase = 'loading', joinMsg = '', busy = false, owners = {}, prevOwn = null, news = [];
 let taken = {}, flagsLoaded = false, wars = {}, warDelArm = null, warMsg = '', sharedInit = false;
+let readOk = false, synced = false, backupTimer = null, lastBackup = '', lastBackupAt = 0, backupErr = '', resyncAt = 0;
 let lastSig = '', pushTimer = null, kickArm = null, leaveArm = false, loaded = { members: false, players: false };
 
 /* ---------- style ---------- */
@@ -179,7 +180,7 @@ function refresh() {
 }
 
 function push() {
-  if (!member) return;
+  if (!member || !synced) return;
   clearTimeout(pushTimer);
   pushTimer = setTimeout(() => {
     const sum = mySummary(), sig = JSON.stringify(Object.assign({}, sum, { updated: 0 }));
@@ -380,8 +381,43 @@ function start() {
   E.say('合戦に参陣中：' + member.name + '軍', 'good');
 }
 
+/* ---------- automatic backup of the whole record (saves/{uid}) ---------- */
+// On sign-in the cloud copy is merged into this device before anything is written, so a new phone never overwrites the record.
+async function syncSave(quiet) {
+  if (!user) return;
+  try {
+    const snap = await getDoc(doc(db, 'saves', user.uid));
+    if (snap.exists()) {
+      let r = null; try { r = JSON.parse(snap.data().json); } catch (e) {}
+      if (r) {
+        const n = E.mergeState(r);
+        if (n === -1) E.say('クラウドの戦歴を復元しました（' + E.state.log.length + '戦）', 'good');
+        else if (n > 0 && !quiet) E.say('クラウドから' + n + '戦分の戦歴を取り込みました', 'good');
+        else if (n > 0) E.say('別の端末の戦歴を' + n + '戦分取り込みました', 'good');
+        lastBackup = E.exportState() === snap.data().json ? snap.data().json : '';
+      }
+    }
+    readOk = true; synced = true; backupErr = '';
+    await backupNow();
+  } catch (e) { backupErr = (e && e.code) || 'error'; synced = true; /* war mode keeps working; backups stay off until the cloud copy has been read */ }
+}
+async function backupNow() {
+  if (!user || !readOk) return;
+  const json = E.exportState();
+  if (json === lastBackup) return;
+  if (json.length > 950000) { backupErr = 'too-large'; return; }
+  try { await setDoc(doc(db, 'saves', user.uid), { json, updated: Date.now() }); lastBackup = json; lastBackupAt = Date.now(); backupErr = ''; }
+  catch (e) { backupErr = (e && e.code) || 'error'; }
+}
+function backup() { if (!user || !readOk) return; clearTimeout(backupTimer); backupTimer = setTimeout(backupNow, 2000); }
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (user && synced) { clearTimeout(backupTimer); backupNow(); } return; }
+  if (user && Date.now() - resyncAt > 30000) { resyncAt = Date.now(); syncSave(true).then(() => { if (member) { lastSig = ''; push(); refresh(); } }); }
+});
+
 onAuthStateChanged(auth, async u => {
-  user = u;
+  user = u; synced = false; readOk = false; lastBackup = '';
+  if (u) await syncSave(false);
   if (!u) { stop(); member = null; phase = 'login'; refresh(); if (E.menuOpen() && E.tab === 'kassen') render(); return; }
   try {
     const m = await getDoc(doc(db, 'members', u.uid));
@@ -429,7 +465,13 @@ async function join(name, color, code) {
 window.EMP_WAR = {
   isMember() { return !!member; },
   blocked(id) { if (!member) return false; const r = owners[id]; return !!(r && r.owner && r.owner !== user.uid); },
-  onSave() { if (!member) return; push(); setTimeout(refresh, 0); },
+  onSave() { backup(); if (!member) return; push(); setTimeout(refresh, 0); },
+  backupStatus() {
+    if (!user) return '自動バックアップ：オフ。「合戦」タブでGoogleログインすると、戦歴がクラウドに自動で保存され、機種変更しても引き継がれます。';
+    if (backupErr === 'permission-denied') return '自動バックアップ：Firestoreのルールが未更新のため保存できていません（総大将に連絡してください）。';
+    if (backupErr) return '自動バックアップ：保存できませんでした（' + backupErr + '）。通信状態を確認してください。';
+    return '自動バックアップ：オン（' + esc(user.email || '') + '）' + (lastBackupAt ? '。最終保存 ' + new Date(lastBackupAt).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '') + '。同じGoogleアカウントでログインすれば、別の端末にも自動で引き継がれます。';
+  },
   onStoreEdit(s, gone) { if (member) shareCastle(s, gone); },
   pending() { return phase === 'loading' || (!!member && !(loaded.members && loaded.players)); },
   hasMonth(ym) { return !!member && Object.values(allPlayers()).some(p => Object.keys(p.dp || {}).some(d => d.startsWith(ym))); },
