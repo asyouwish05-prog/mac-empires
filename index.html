@@ -13,7 +13,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
-<script>window.EMP_BUILD="20261104141334";</script>
+<script>window.EMP_BUILD="20261104194946";</script>
 </head>
 <body>
 <title>McDonald's EMPIRES</title>
@@ -1517,6 +1517,7 @@ $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') hideMo
 /* ---------- tutorial (setup checks + how to play) ---------- */
 // Shown at launch until finished once. The very first run has no skip button; from the second showing on it does.
 const MANUAL_URL = 'https://asyouwish05-prog.github.io/mac-empires/manual.html';
+const SAFETY_GUIDE_URL = 'https://asyouwish05-prog.github.io/mac-empires/safety.html';
 const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 let installPrompt = null, permGeo = 'unknown';
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
@@ -1642,7 +1643,7 @@ function openTab(t) {
 function openHelp() {
   const done = [['ホーム画面に追加', setupState.home()], ['位置情報', setupState.geo()], ['BGM', setupState.sound()], ['合戦に参戦', setupState.war()]];
   showModal('困ったときは', '使い方',
-    '<div class="row"><button class="primary" id="hp-tut">チュートリアルを見る</button><a class="ghost" style="text-decoration:none;display:inline-block" href="' + MANUAL_URL + '" target="_blank" rel="noopener">マニュアルを開く</a></div>' +
+    '<div class="row"><button class="primary" id="hp-tut">チュートリアルを見る</button><a class="ghost" style="text-decoration:none;display:inline-block" href="' + MANUAL_URL + '" target="_blank" rel="noopener">マニュアルを開く</a><a class="ghost" style="text-decoration:none;display:inline-block" href="' + SAFETY_GUIDE_URL + '" target="_blank" rel="noopener">安心ガイド</a></div>' +
     '<div><h3>準備の状況</h3><div class="history">' + done.map(([n, v]) => '<div><span>' + n + '</span><span style="color:' + (v ? 'var(--jade)' : 'var(--warn)') + '">' + (v ? '済' : 'まだ') + '</span></div>').join('') + '</div></div>' +
     '<div><h3>よくある質問</h3><div class="law"><ul>' +
       '<li><b>出陣ボタンが押せない</b>：店の30m以内に入ると押せます。城の画面に距離が出ています。屋内ではGPSがずれやすいので、入口付近で試してください。</li>' +
@@ -1650,6 +1651,7 @@ function openHelp() {
       '<li><b>音が鳴らない</b>：画面に一度触れると鳴ります。「鼓」ボタンが赤ならオンです。' + (IS_IOS ? 'iPhoneはマナーモードを解除してください。' : '') + '</li>' +
       '<li><b>参戦できない</b>：合言葉を確認してください。参戦画面に出る赤い文字が原因を示しています。</li>' +
       '<li><b>新しい機能が出てこない</b>：アプリを一度完全に閉じて開き直してください。</li>' +
+      '<li><b>データやセキュリティが心配</b>：Googleから受け取るのは名前・メール・アイコンだけで、現在地はサーバーに送りません。詳しくは「安心ガイド」へ。データは「合戦」タブの「完全に退会する」でいつでも全部消せます。</li>' +
     '</ul></div></div>');
   $('#hp-tut').onclick = () => { hideModal(); startTour(); };
 }
@@ -1658,7 +1660,7 @@ $('#b-help').addEventListener('click', () => { sfx('select'); openHelp(); });
 /* ---------- 軍法 (rules summary) ---------- */
 function rulesHTML() {
   const tbl = (head, rows) => '<div class="tscroll"><table class="ltable"><tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr>' + rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('') + '</table></div>';
-  return '<div class="row"><button class="ghost" id="r-tour">チュートリアルをもう一度見る</button><a class="ghost" style="text-decoration:none;display:inline-block" href="' + MANUAL_URL + '" target="_blank" rel="noopener">マニュアルを開く</a></div>' +
+  return '<div class="row"><button class="ghost" id="r-tour">チュートリアルをもう一度見る</button><a class="ghost" style="text-decoration:none;display:inline-block" href="' + MANUAL_URL + '" target="_blank" rel="noopener">マニュアルを開く</a><a class="ghost" style="text-decoration:none;display:inline-block" href="' + SAFETY_GUIDE_URL + '" target="_blank" rel="noopener">安心ガイド</a></div>' +
     '<section class="law"><h3>序、武士の誓い（インテグリティ）</h3><p>行ってなくてもボタン押せるので、<b>ズルはなしね</b>。出陣は実際に店に行って注文したときだけ。頼んでいない兵糧を選ぶのもなし。<b>インテグリティ</b>をもって対応しましょう。</p></section>' +
     '<section class="law"><h3>一、出陣</h3><ul><li>店の<b>30m以内</b>で城を開き、注文した兵糧を選ぶと出陣（チェックイン）になります。</li><li>店から80m以内に入ると、その城が自動で選ばれます。</li><li>誤って出陣したときは15秒以内なら「取り消す」、それ以降は戦歴タブで削除できます。</li></ul>' +
       tbl(['兵糧', '兵力'], Object.keys(MENUS).map(k => [MENUS[k].name, '+' + MENUS[k].pt])) + '</section>' +
@@ -1826,6 +1828,6 @@ if (lsGet('mce_tut_done') === '1') startGeo();
 })();
 </script>
 
-<script type="module" src="war.js?v=20261104141334"></script>
+<script type="module" src="war.js?v=20261104194946"></script>
 </body>
 </html>

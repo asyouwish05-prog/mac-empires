@@ -1,7 +1,7 @@
 // McDonald's EMPIRES — 合戦モード（Firebase）
 // GitHub Pages 版でのみ読み込まれる。本体とは window.EMP でつながる。
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, deleteUser, reauthenticateWithPopup } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
 import { getFirestore, doc, getDoc, getDocs, setDoc, deleteDoc, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js';
 
 const E = window.EMP;
@@ -28,6 +28,8 @@ const ls = { get(k) { try { return localStorage.getItem(k); } catch (e) { return
 let user = null, member = null, members = {}, players = {}, conf = {}, unsubs = [];
 let phase = 'loading', joinMsg = '', busy = false, owners = {}, prevOwn = null, news = [];
 let taken = {}, flagsLoaded = false, wars = {}, warDelArm = null, warMsg = '', sharedInit = false;
+const SAFETY_URL = 'https://asyouwish05-prog.github.io/mac-empires/safety.html';
+let wipeArm = 0, wiping = false;
 let readOk = false, synced = false, backupTimer = null, lastBackup = '', lastBackupAt = 0, backupErr = '', resyncAt = 0;
 let lastSig = '', pushTimer = null, kickArm = null, leaveArm = false, loaded = { members: false, players: false };
 
@@ -535,6 +537,43 @@ window.EMP_WAR = {
 };
 let tabBody = null;
 
+/* ---------- full withdrawal: delete everything this player has on the server ---------- */
+function wipeHTML() {
+  const owner = member && conf.owner === user.uid;
+  return '<div><h3>完全に退会する</h3><p class="note">合戦の記録、自動バックアップ、ログイン情報をサーバーからすべて削除し、Googleとの連携も切ります。この端末の戦歴だけは残ります（消したいときは「記録管理」の全データ消去）。</p>' +
+    (owner ? '<p class="note" style="color:var(--warn)">あなたは総大将です。退会すると、合戦イベントの開催や追放ができる人がいなくなります。</p>' : '') +
+    '<div class="row" style="margin-top:8px"><button class="ghost danger" id="w-wipe"' + (wiping ? ' disabled' : '') + '>' + (wiping ? '削除しています…' : wipeArm === 1 ? 'もう一度押す：すべて削除' : wipeArm === 2 ? '最終確認：元に戻せません' : '完全に退会する') + '</button>' +
+    (wipeArm ? '<button class="ghost" id="w-wipe-no">やめる</button>' : '') + '<a class="ghost" style="text-decoration:none;display:inline-block" href="' + SAFETY_URL + '" target="_blank" rel="noopener">安心ガイド</a></div></div>';
+}
+function bindWipe(body) {
+  const b = body.querySelector('#w-wipe'), no = body.querySelector('#w-wipe-no');
+  if (no) no.onclick = () => { wipeArm = 0; render(); };
+  if (b) b.onclick = async () => {
+    if (wipeArm < 2) { wipeArm++; render(); return; }
+    wipeArm = 0; wiping = true; render();
+    const uid = user.uid, color = member && member.color;
+    readOk = false; synced = false; clearTimeout(backupTimer); clearTimeout(pushTimer); stop();
+    const steps = [];
+    if (color) steps.push(() => releaseFlag(color, uid));
+    ['players', 'members', 'saves'].forEach(c => steps.push(() => deleteDoc(doc(db, c, uid))));
+    let failed = 0;
+    for (const f of steps) { try { await f(); } catch (e) { failed++; } }
+    ['mce_war_news_', 'mce_war_own_', 'mce_war_known_', 'mce_war_wknown_', 'mce_war_seen_'].forEach(k => { try { localStorage.removeItem(k + uid); } catch (e) {} });
+    member = null; members = {}; players = {}; owners = {};
+    try { await deleteUser(auth.currentUser); }
+    catch (e) {
+      if (e && e.code === 'auth/requires-recent-login') {
+        try { const pr = new GoogleAuthProvider(); await reauthenticateWithPopup(auth.currentUser, pr); await deleteUser(auth.currentUser); }
+        catch (e2) { failed++; await signOut(auth).catch(() => {}); }
+      } else { failed++; await signOut(auth).catch(() => {}); }
+    }
+    wiping = false; phase = 'login';
+    joinMsg = failed ? '一部のデータを削除できませんでした。通信状態を確認し、もう一度ログインして「完全に退会する」を押すか、総大将に削除を頼んでください。' : '退会しました。サーバー上のあなたのデータはすべて削除されました。';
+    E.draw(); if (E.selected) E.renderSheet(); render();
+    E.say(failed ? 'データの一部を削除できませんでした' : '退会しました。サーバー上のデータを削除しました', failed ? 'warn' : 'good');
+  };
+}
+
 /* ---------- tab ---------- */
 function render() {
   const body = tabBody || document.getElementById('menu-body');
@@ -542,9 +581,10 @@ function render() {
   if (phase === 'loading') { body.innerHTML = '<div class="empty">合戦の情報を読み込み中…</div>'; return; }
   if (phase === 'login' || !user) {
     body.innerHTML = '<div><h3>合戦に参陣する</h3><p class="note">仲間と同じ地図で城を奪い合うモードです。直近90日の出陣回数が一番多い軍がその城の城主になり、他の軍に追い抜かれると落城します。</p></div>' +
+      '<div class="war-info"><div><b>Googleから受け取るのは、名前・メールアドレス・アイコンだけです。</b></div><div>パスワード、Gmail、写真、連絡先には一切アクセスしません。現在地もサーバーには送りません。データは「完全に退会する」でいつでも全部消せます。</div><div><a href="' + SAFETY_URL + '" target="_blank" rel="noopener" style="color:var(--gold-hi)">安心ガイドを読む</a></div></div>' +
       '<div class="row"><button class="primary" id="w-login">Googleでログイン</button></div>' +
       (joinMsg ? '<p class="note" style="color:var(--warn)">' + esc(joinMsg) + '</p>' : '') +
-      '<p class="note">仲間に見えるのは武将名・城主・出陣回数・ランキングだけです。メールアドレスや出陣した時刻は表示されません。</p>';
+      '<p class="note">仲間に見えるのは武将名・城主・出陣回数・ランキングだけです。合戦に出ず一人で遊ぶだけなら、ログインは不要です。</p>';
     body.querySelector('#w-login').onclick = login;
     return;
   }
@@ -555,12 +595,13 @@ function render() {
       '<form class="wform" id="w-join">' +
         '<label>武将名（仲間に表示されます）<input type="text" id="w-name" maxlength="12" placeholder="例：マック信長"></label>' +
         '<label>軍旗の色</label><div class="wcolors" id="w-colors">' + Object.keys(COLORS).map(k => { const used = taken[k] && taken[k] !== user.uid; return '<button type="button" class="wcolor" data-c="' + k + '" aria-pressed="' + (k === color) + '"' + (used ? ' disabled' : '') + '><i class="wdot" style="background:' + COLORS[k][1] + '"></i>' + COLORS[k][0] + (used ? '（使用中）' : '') + '</button>'; }).join('') + '</div>' +
-        (!flagsLoaded ? '<p class="note">使用中の色を確認しています…</p>' : !color ? '<p class="note" style="color:var(--warn)">5色すべて使用中です。総大将に相談してください</p>' : '') +
+        (!flagsLoaded ? '<p class="note">使用中の色を確認しています…</p>' : !color ? '<p class="note" style="color:var(--warn)">すべての色が使用中です。総大将に相談してください</p>' : '') +
         '<label>合言葉<input type="text" id="w-code" autocomplete="off" placeholder="仲間から聞いた合言葉"></label>' +
         '<p class="note"><b style="color:var(--gold-hi)">武士の誓い（インテグリティ）</b>：行ってなくてもボタン押せるので、ズルはなしね。インテグリティをもって対応しましょう。</p>' +
         '<div class="row"><button class="primary" type="submit"' + (busy ? ' disabled' : '') + '>誓って参戦する</button><button class="ghost" type="button" id="w-out">ログアウト</button></div>' +
         (joinMsg ? '<p class="note" style="color:var(--warn)">' + esc(joinMsg) + '</p>' : '') +
-      '</form>';
+      '</form>' + wipeHTML();
+    bindWipe(body);
     body.querySelectorAll('.wcolor').forEach(b => b.onclick = () => { color = b.dataset.c; body.querySelectorAll('.wcolor').forEach(x => x.setAttribute('aria-pressed', String(x === b))); });
     body.querySelector('#w-out').onclick = () => signOut(auth);
     body.querySelector('#w-join').onsubmit = e => {
@@ -603,8 +644,10 @@ function render() {
       '<div style="margin-top:10px">' + Object.entries(members).filter(([u]) => u !== me).map(([u, m]) =>
         '<div class="wmember"><span><i class="wdot" style="background:' + colorOf(u) + '"></i>' + esc(m.name) + '軍</span><button class="ghost danger" data-kick="' + esc(u) + '">' + (kickArm === u ? 'もう一度押すと追放' : '追放する') + '</button></div>').join('') + '</div>' +
     '</div>' : '') +
-    '<div><h3>退く</h3><p class="note">「戦から退く」を押すと、合戦に送ったあなたの記録が消えます。この端末の戦歴は残ります。</p>' +
-      '<div class="row" style="margin-top:8px"><button class="ghost danger" id="w-leave">' + (leaveArm ? '最終確認：押すと退く' : '戦から退く') + '</button><button class="ghost" id="w-out">ログアウト</button></div></div>';
+    '<div><h3>退く</h3><p class="note">「戦から退く」を押すと、合戦に送ったあなたの記録が消えます。自動バックアップとこの端末の戦歴は残ります。</p>' +
+      '<div class="row" style="margin-top:8px"><button class="ghost danger" id="w-leave">' + (leaveArm ? '最終確認：押すと退く' : '戦から退く') + '</button><button class="ghost" id="w-out">ログアウト</button></div></div>' +
+    wipeHTML();
+  bindWipe(body);
 
   bindWars(body);
   let color = member.color;

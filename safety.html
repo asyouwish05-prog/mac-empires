@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b1712">
+<title>EMPIRES 安心ガイド</title>
+<link rel="icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column on lacquer; numbered steps only where order matters (setup, one sortie). */
+:root {
+  --ink: #0d0c0a; --lacquer: #1b1712; --line: #3a3124; --gold: #d4af37; --gold-hi: #f0d68a;
+  --crimson: #a31e1e; --jade: #5cc4a0; --paper: #efe6d0; --muted: #a69c86; --warn: #e98a3a;
+  --font-display: "Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --font-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--ink); color: var(--paper); font-family: var(--font-body); font-size: 15px; line-height: 1.8;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: env(safe-area-inset-top, 0px) calc(48px + env(safe-area-inset-bottom, 0px)); }
+.wrap { max-width: 640px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+a { color: var(--gold-hi); }
+:focus-visible { outline: 2px solid var(--gold-hi); outline-offset: 2px; }
+
+.hero { padding-block: 36px 24px; border-bottom: 1px solid var(--gold); display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 11px; letter-spacing: .3em; color: var(--muted); }
+.hero h1 { font-size: clamp(30px, 8vw, 44px); line-height: 1.2; color: var(--gold-hi); }
+.hero p { color: var(--paper); }
+.cta { display: inline-flex; align-items: center; justify-content: center; gap: 8px; align-self: flex-start; margin-top: 6px; padding: 12px 20px; border-radius: 8px; background: var(--gold); color: var(--ink); font-weight: 700; text-decoration: none; }
+.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; padding-block: 14px; border-bottom: 1px solid var(--line); }
+.toc a { color: var(--muted); text-decoration: none; }
+.toc a:hover { color: var(--gold-hi); }
+
+section { padding-block: 32px 8px; display: flex; flex-direction: column; gap: 14px; }
+section > h2 { font-size: 24px; color: var(--gold-hi); display: flex; align-items: baseline; gap: 10px; }
+section > h2 small { font-family: var(--font-body); font-size: 11px; letter-spacing: .2em; color: var(--muted); font-weight: 500; }
+.lead { color: var(--muted); font-size: 14px; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; counter-reset: s; }
+.steps > li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; counter-increment: s; }
+.steps > li::before { content: counter(s); width: 40px; height: 40px; border-radius: 6px; background: var(--crimson); border: 1px solid var(--gold); color: var(--gold-hi); font-family: var(--font-display); font-weight: 800; font-size: 20px; display: grid; place-items: center; }
+.steps h3 { font-size: 17px; line-height: 1.4; padding-top: 7px; }
+.steps .body { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+
+.os { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 480px) { .os { grid-template-columns: minmax(0, 1fr); } }
+.os div { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.7; background: var(--lacquer); }
+.os b { display: block; font-size: 11px; letter-spacing: .15em; color: var(--gold-hi); margin-bottom: 2px; }
+.note { font-size: 13px; color: var(--muted); }
+.warn { font-size: 13px; color: var(--warn); }
+
+.buttons { display: flex; flex-direction: column; }
+.btnrow { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: center; padding-block: 10px; border-bottom: 1px dotted var(--line); }
+.kanji { width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--gold); background: var(--lacquer); color: var(--gold-hi); font-family: var(--font-display); font-weight: 800; font-size: 16px; display: grid; place-items: center; }
+.btnrow b { color: var(--paper); }
+.btnrow span { font-size: 14px; }
+
+.marks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.mark { border: 1px solid var(--line); border-radius: 8px; padding: 12px 8px; text-align: center; font-size: 12px; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.mark i { display: block; }
+.m-free { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--jade); }
+.m-mine { width: 18px; height: 18px; background: var(--crimson); border: 2px solid var(--gold-hi); transform: rotate(45deg); }
+.m-foe { width: 14px; height: 12px; background: #4a8fe0; box-shadow: -2px 0 0 0 var(--paper); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; font-size: 11px; letter-spacing: .08em; }
+.tscroll { overflow-x: auto; }
+
+.oath { border: 1px solid var(--gold); border-radius: 10px; padding: 16px; background: rgba(163,30,30,.18); display: flex; flex-direction: column; gap: 6px; }
+.oath h3 { font-size: 18px; color: var(--gold-hi); }
+
+details { border-bottom: 1px solid var(--line); padding-block: 10px; }
+summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; gap: 10px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "＋"; color: var(--gold-hi); }
+details[open] summary::after { content: "－"; }
+details p { margin-top: 6px; font-size: 14px; color: var(--paper); }
+footer { margin-top: 40px; font-size: 12px; color: var(--muted); }
+</style>
+<style>
+.facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 480px) { .facts { grid-template-columns: minmax(0, 1fr); } }
+.fact { border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: var(--lacquer); display: flex; flex-direction: column; gap: 4px; }
+.fact b { font-family: var(--font-display); font-size: 16px; color: var(--gold-hi); }
+.fact.no b { color: var(--jade); }
+.fact span { font-size: 13px; line-height: 1.7; }
+.yes { color: var(--warn); font-weight: 700; }
+.ok { color: var(--jade); font-weight: 700; }
+.honest { border-left: 3px solid var(--warn); padding: 4px 0 4px 12px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+ul.plain { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="eyebrow">McDonald's EMPIRES 安心ガイド</div>
+    <h1>データとセキュリティのこと</h1>
+    <p>仲間内で遊ぶために個人で作っているアプリです。何を集めて、誰が見られて、どうすれば消せるのかを、隠さずに書きました。</p>
+    <a class="cta" href="./">アプリに戻る</a>
+  </header>
+  <nav class="toc" aria-label="目次">
+    <a href="#short">ひとことで</a><a href="#google">Googleログイン</a><a href="#gps">位置情報</a><a href="#data">保存されるデータ</a><a href="#delete">データを消す</a><a href="#honest">正直に伝えること</a><a href="#promise">総大将の約束</a>
+  </nav>
+
+  <section id="short">
+    <h2>ひとことで</h2>
+    <div class="facts">
+      <div class="fact no"><b>パスワードは届かない</b><span>ログインはGoogleの公式画面で行い、パスワードはGoogleにしか入力されません。</span></div>
+      <div class="fact no"><b>Gmailや写真は見えない</b><span>受け取るのは名前・メールアドレス・アイコンだけです。</span></div>
+      <div class="fact no"><b>現在地は送らない</b><span>位置は手元のスマホで距離を測るだけ。サーバーには送りません。</span></div>
+      <div class="fact no"><b>いつでも全部消せる</b><span>「完全に退会する」で、サーバー上のあなたのデータを本人の操作で削除できます。</span></div>
+    </div>
+    <p class="note">合戦に出ず一人で遊ぶだけなら、Googleログインは不要です。</p>
+  </section>
+
+  <section id="google">
+    <h2>Googleログインについて</h2>
+    <div class="tscroll"><table>
+      <tr><th>アプリが受け取るもの</th><th>受け取らないもの</th></tr>
+      <tr><td>名前、メールアドレス、アイコン画像、Googleが割り振る識別番号</td><td>パスワード、Gmailの中身、写真、連絡先、Googleドライブ、カレンダー、検索履歴など</td></tr>
+    </table></div>
+    <p>ログインの仕組みには、Googleが提供している「Firebase Authentication」を使っています。多くのアプリやゲームで使われている標準的な仕組みです。</p>
+    <p><b>連携の解除</b>：Googleアカウントの「セキュリティ」→「サードパーティ製のアプリとサービス」から、いつでも外せます。<br><a href="https://myaccount.google.com/connections" target="_blank" rel="noopener">Googleアカウントの連携一覧を開く</a></p>
+  </section>
+
+  <section id="gps">
+    <h2>位置情報について</h2>
+    <ul class="plain">
+      <li>現在地は、スマホの中で「店まで何mか」を計算するためだけに使います。</li>
+      <li>サーバーに送るのは「どの店に出陣したか」だけで、現在地や移動の経路は送りません。</li>
+      <li>位置情報を許可しなくてもアプリは開けますが、出陣（チェックイン）はできません。</li>
+    </ul>
+  </section>
+
+  <section id="data">
+    <h2>保存されるデータと、見られる人</h2>
+    <p>データはGoogleのサーバー（Firebase）に保存され、通信はすべて暗号化されています。誰が何を読めるかはサーバー側のルールで決めていて、アプリを改造しても変えられません。</p>
+    <div class="tscroll"><table>
+      <tr><th>データ</th><th>仲間</th><th>総大将</th></tr>
+      <tr><td>武将名・軍旗の色・城主・出陣回数・ランキング</td><td class="yes">見える</td><td class="yes">見える</td></tr>
+      <tr><td>メールアドレス</td><td class="ok">見えない</td><td class="yes">管理画面で見える</td></tr>
+      <tr><td>店ごとの出陣した日付（時刻なし、直近120日）</td><td>画面には出ない※</td><td class="yes">管理画面で見える</td></tr>
+      <tr><td>出陣した時刻・メモ・戦歴の全体（自動バックアップ）</td><td class="ok">見えない</td><td class="ok">見えない</td></tr>
+      <tr><td>現在地・移動の経路</td><td class="ok">保存しない</td><td class="ok">保存しない</td></tr>
+    </table></div>
+    <p class="note">※ 城主の判定（直近90日の出陣回数）に使うため、店ごとの日付は参加者のアプリに届いています。画面には表示しませんが、アプリを改造できる詳しい人なら読み出せます。</p>
+    <p class="note">アプリのコードはすべて <a href="https://github.com/asyouwish05-prog/mac-empires" target="_blank" rel="noopener">GitHub</a> で公開しています。隠れた処理がないことを、詳しい人なら誰でも確かめられます。</p>
+  </section>
+
+  <section id="delete">
+    <h2>データを消したいとき</h2>
+    <div class="tscroll"><table>
+      <tr><th>操作</th><th>消えるもの</th><th>残るもの</th></tr>
+      <tr><td>「合戦」タブ →「戦から退く」</td><td>合戦に送った記録（城主・回数など）</td><td>自動バックアップ、Googleの連携、この端末の戦歴</td></tr>
+      <tr><td>「合戦」タブ →「完全に退会する」</td><td>合戦の記録、自動バックアップ、ログイン情報（Googleとの連携も切れます）</td><td>この端末の戦歴のみ</td></tr>
+      <tr><td>「記録管理」→「全データを消去する」</td><td>この端末の戦歴</td><td>—</td></tr>
+    </table></div>
+    <p class="note">築城や店名の修正など、仲間の地図に反映した城の情報は共有の地図データとして残ります（あなたの名前は表示されません）。</p>
+  </section>
+
+  <section id="honest">
+    <h2>正直に伝えておくこと</h2>
+    <div class="honest">
+      <p><b>個人が運営しています。</b>会社のサービスではないので、データの扱いは下の「総大将の約束」が頼りです。</p>
+      <p><b>総大将はメールアドレスを見られます。</b>管理画面の仕組み上、隠すことはできません。</p>
+      <p><b>GPSの偽装は防げません。</b>これはズルの問題で、データの安全とは別ですが、仲間を信じる遊びです。</p>
+    </div>
+  </section>
+
+  <section id="promise">
+    <h2>総大将の約束</h2>
+    <ul class="plain">
+      <li>集めたデータは、このゲームを動かすことにしか使いません。</li>
+      <li>第三者に渡したり、売ったりしません。広告も入れません。</li>
+      <li>管理画面で、仲間の出陣の記録をのぞき見しません。</li>
+      <li>管理用のGoogleアカウントは2段階認証で守ります。</li>
+      <li>消してほしいと言われたら、すぐに対応します。</li>
+    </ul>
+  </section>
+
+  <footer>わからないことがあれば、総大将に直接聞いてください。　<a href="manual.html">指南書（使い方）</a></footer>
+</div>
+</body>
+</html>
