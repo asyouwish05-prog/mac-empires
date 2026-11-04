@@ -13,7 +13,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}img{max-width:100%}</style>
-<script>window.EMP_BUILD="20261028135849";</script>
+<script>window.EMP_BUILD="20261104140014";</script>
 </head>
 <body>
 <title>McDonald's EMPIRES</title>
@@ -247,6 +247,7 @@ h3 { font-family: var(--font-display); font-weight: 800; font-size: 16px; color:
 
     <div class="tools left">
       <button class="tool" id="b-bgm" aria-label="合戦BGM">鼓<small>BGM</small></button>
+      <button class="tool" id="b-help" aria-label="使い方">教<small>使い方</small></button>
     </div>
     <div class="tools">
       <button class="tool" id="b-loc" aria-label="現在地へ">陣<small>現在地</small></button>
@@ -1501,22 +1502,100 @@ function hideModal() { $('#modal').hidden = true; const f = modalClose; modalClo
 $('#modal-x').addEventListener('click', () => { sfx('select'); hideModal(); });
 $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') hideModal(); });
 
-/* ---------- first-run tour ---------- */
-const TOUR = [
-  { t: 'McDonald\'s EMPIRESへようこそ', b: 'マクドナルドに通うたびに城が育ち、地図上の支配圏が広がっていく陣取りゲームです。8つの手順で遊び方を紹介します。' },
+/* ---------- tutorial (setup checks + how to play) ---------- */
+// Shown at launch until finished once. The very first run has no skip button; from the second showing on it does.
+const MANUAL_URL = 'https://asyouwish05-prog.github.io/mac-empires/manual.html';
+const IS_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let installPrompt = null, permGeo = 'unknown';
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
+window.addEventListener('appinstalled', () => { installPrompt = null; lsSet('mce_installed', '1'); });
+function isStandalone() { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; } }
+function readGeoPerm() {
+  try {
+    if (!navigator.permissions) return;
+    navigator.permissions.query({ name: 'geolocation' }).then(p => { permGeo = p.state; p.onchange = () => { permGeo = p.state; }; }).catch(() => {});
+  } catch (e) {}
+}
+readGeoPerm();
+const setupState = {
+  home: () => isStandalone() || lsGet('mce_installed') === '1',
+  geo: () => geoState === 'ok' || permGeo === 'granted',
+  sound: () => bgmOn,
+  war: () => !!(window.EMP_WAR && EMP_WAR.isMember && EMP_WAR.isMember())
+};
+const pill = ok => '<span class="pill ' + (ok ? 'live' : '') + '" style="margin-left:8px;vertical-align:3px">' + (ok ? '済' : 'まだ') + '</span>';
+const SETUP = {
+  home() {
+    const ok = setupState.home();
+    if (ok) return '<p>ホーム画面から開いています。次からもアイコンから起動してください。</p>';
+    return '<p>アプリのように全画面で使えて、次から開くのも簡単になります。</p>' +
+      (installPrompt ? '<div class="row"><button class="primary" id="tu-install">ホーム画面に追加する</button></div>' : '') +
+      '<p class="note">' + (IS_IOS
+        ? '<b>iPhone</b>：Safariで開き、画面下の共有ボタン（四角から矢印が出ているマーク）→「ホーム画面に追加」→「追加」。'
+        : '<b>Android</b>：Chromeの右上「︙」→「ホーム画面に追加」または「アプリをインストール」。') +
+      ' 追加したら、ホーム画面のアイコン「EMPIRES」から開き直してください。</p>';
+  },
+  geo() {
+    const ok = setupState.geo();
+    if (ok) return '<p>位置情報が使えます。店の30m以内に入ると出陣ボタンが押せるようになります。</p>';
+    if (geoState === 'denied' || permGeo === 'denied') return '<p>位置情報がオフになっています。出陣するにはオンにしてください。</p><p class="note">' + (IS_IOS
+      ? '<b>iPhone</b>：「設定」→「プライバシーとセキュリティ」→「位置情報サービス」をオン →「Safariのサイト」を「使用中のみ」にする。'
+      : '<b>Android</b>：Chromeの「︙」→「設定」→「サイトの設定」→「位置情報」で、このサイトを「許可」にする。') + ' 変えたらアプリを開き直してください。</p>';
+    return '<p>出陣は店の30m以内でしかできないので、位置情報を使います。下のボタンを押して、出てきた確認で「許可」を選んでください。</p>' +
+      '<div class="row"><button class="primary" id="tu-geo">位置情報を許可する</button></div>' +
+      (geoState === 'waiting' ? '<p class="note">確認画面が出ていれば「許可」を押してください。測位中…</p>' : '');
+  },
+  sound() {
+    const ok = setupState.sound();
+    return '<p>合戦のBGMと、参戦や落城を知らせる読み上げが鳴ります。' + (ok ? '今BGMが流れています。' : '') + '</p>' +
+      (ok ? '' : '<div class="row"><button class="primary" id="tu-sound">BGMを鳴らしてみる</button></div>') +
+      '<p class="note">音が出ないときは音量を上げてください。' + (IS_IOS ? 'iPhoneはマナーモード（本体横のスイッチ）だと鳴りません。' : '') + '止めたいときは左上の「鼓」ボタンです。</p>';
+  },
+  war() {
+    const ok = setupState.war();
+    const list = '<div class="history" style="margin:4px 0">' +
+      [['ホーム画面に追加', setupState.home()], ['位置情報', setupState.geo()], ['BGM', setupState.sound()], ['合戦に参戦', ok]]
+        .map(([n, v]) => '<div><span>' + n + '</span><span style="color:' + (v ? 'var(--jade)' : 'var(--warn)') + '">' + (v ? '済' : 'まだ') + '</span></div>').join('') + '</div>';
+    if (!window.EMP_WAR) return '<p>仲間との合戦は、ホーム画面版（GitHub Pages）で参加できます。</p>' + list;
+    if (ok) return '<p>参戦済みです。あとは店に行って出陣するだけです。</p>' + list;
+    return '<p>仲間と城を奪い合うには参戦が必要です。「合戦」タブでGoogleログイン → 武将名・軍旗の色・合言葉（仲間から聞いたもの）を入れて「誓って参戦する」。</p>' + list +
+      '<div class="row"><button class="primary" id="tu-war">合戦タブを開いて参戦する</button></div>';
+  }
+};
+const TUT = [
+  { t: 'McDonald\'s EMPIRESへようこそ', b: 'マクドナルドに通うたびに城が育ち、地図上の支配圏が広がっていく陣取りゲームです。<br>最初に<b>3つの準備</b>をして、そのあと遊び方を紹介します（1分ほど）。' },
+  { t: '準備1　ホーム画面に追加', setup: 'home' },
+  { t: '準備2　位置情報を許可', setup: 'geo' },
+  { t: '準備3　音を鳴らす', setup: 'sound', el: '#b-bgm' },
   { t: '地図の印が城です', el: '#map', b: '緑の丸が未制圧の城、赤いひし形が自軍の城です。ひし形の数字は城のレベル。城をタップすると、城の情報と出陣のボタンが開きます。' },
-  { t: '店の30m以内で出陣', b: '店に着いたら城を開き、注文した兵糧（朝マック・セット・期間限定・カフェ）を選ぶと出陣です。同じ日に別の城を回ると<b>連戦ボーナス</b>、毎日通うと<b>連日ボーナス</b>が付きます。' },
+  { t: '店の30m以内で出陣', b: '店に着いたら城を開き、注文した兵糧（朝マック・セット・期間限定・カフェ）を選ぶと出陣です。80m以内に近づくと城が自動で選ばれます。同じ日に別の城を回ると<b>連戦ボーナス</b>、毎日通うと<b>連日ボーナス</b>が付きます。' },
   { t: '武士の誓い（インテグリティ）', b: '行ってなくてもボタン押せるので、<b>ズルはなしね</b>。出陣は実際に店に行って注文したときだけ、<b>インテグリティ</b>をもって対応しましょう。' },
   { t: '地図にない店は築城', el: '#b-build', b: '「築」を押してから、地図上の店の位置をタップし、店名を入れると新しい城ができます。合戦に参加していれば、建てた城は仲間の地図にも現れます。' },
-  { t: '店名と位置の修正をお願いします', b: '城を開いた画面の下にある「城の名を改める」「位置を直す」で直せます。店名が違う、ピンがずれている、と気づいたら直してください。合戦に参加していれば、直した内容は仲間全員の地図に反映されます。閉店した店は「城を地図から外す」で消せます。' },
+  { t: '店名と位置の修正をお願いします', b: '城を開いた画面の下にある「城の名を改める」「位置を直す」で直せます。店名が違う、ピンがずれている、と気づいたら直してください。合戦に参加していれば、直した内容は仲間全員の地図に反映されます。' },
   { t: '偵察で店を探す', el: '#b-scan', b: '「偵」を押すと、表示中の範囲のマクドナルドを探して城として追加し、ずれている城の位置も直します。' },
-  { t: '軍略メニュー', el: '#b-menu', b: '「略」から戦歴・イベント・月報・軍法（ルールのまとめ）を見られます。「合戦」タブでは武将名を決めて仲間と城を奪い合えます。武将名と軍旗の色は「合戦」タブの「自軍の設定」でいつでも変えられます。' }
+  { t: '軍略メニュー', el: '#b-menu', b: '「略」から戦歴・イベント・月報・軍法（ルールのまとめ）を見られます。困ったら左の「教」からマニュアルを開けます。' },
+  { t: '最後に　合戦に参戦', setup: 'war' }
 ];
-let tourI = 0, tourDone = null;
-function startTour(onDone) { tourI = 0; tourDone = onDone || null; closeSheet(); $('#tour').hidden = false; showTourStep(); }
-function endTour() { $('#tour').hidden = true; lsSet('mce_tour_v2', '1'); const f = tourDone; tourDone = null; if (f) f(); }
+let tourI = 0, tourDone = null, tourTimer = null, tourSig = '';
+function startTour(onDone) {
+  tourI = 0; tourDone = onDone || null; closeSheet(); $('#modal').hidden = true;
+  const seen = +(lsGet('mce_tut_seen') || (lsGet('mce_tour_v2') ? 1 : 0));
+  tourCanSkip = seen >= 1 || lsGet('mce_tut_done') === '1';
+  lsSet('mce_tut_seen', String(seen + 1));
+  $('#tour').hidden = false; showTourStep();
+  clearInterval(tourTimer);
+  tourTimer = setInterval(() => { const st = TUT[tourI]; if (!$('#tour').hidden && st && st.setup && tourSigOf() !== tourSig) showTourStep(); }, 800);
+}
+let tourCanSkip = false;
+function endTour() {
+  $('#tour').hidden = true; clearInterval(tourTimer); lsSet('mce_tut_done', '1'); lsSet('mce_tour_v2', '1');
+  if (watchId == null && geoState !== 'denied') startGeo();
+  const f = tourDone; tourDone = null; if (f) f();
+}
+function tourSigOf() { const st = TUT[tourI]; return tourI + ':' + (st.setup ? [setupState.home(), setupState.geo(), setupState.sound(), setupState.war(), geoState, permGeo, !!installPrompt].join() : ''); }
 function showTourStep() {
-  const st = TOUR[tourI], ring = $('#tour-ring'), card = $('#tour-card');
+  const st = TUT[tourI], ring = $('#tour-ring'), card = $('#tour-card');
+  tourSig = tourSigOf();
   const el = st.el && document.querySelector(st.el);
   let low = true;
   if (el && st.el !== '#map') {
@@ -1529,19 +1608,45 @@ function showTourStep() {
   } else ring.style.cssText = 'left:50%;top:40%;width:0;height:0;border-width:0';
   card.style.top = low ? 'auto' : 'calc(24px + env(safe-area-inset-top, 0px))';
   card.style.bottom = low ? 'calc(24px + env(safe-area-inset-bottom, 0px))' : 'auto';
-  card.innerHTML = '<h2>' + st.t + '</h2><p>' + st.b + '</p>' +
-    '<div class="tour-foot"><div class="tour-dots">' + TOUR.map((_, i) => '<i class="' + (i === tourI ? 'on' : '') + '"></i>').join('') + '</div>' +
-    '<div class="row">' + (tourI < TOUR.length - 1 ? '<button class="ghost" id="tour-skip">閉じる</button>' : '') + (tourI ? '<button class="ghost" id="tour-back">戻る</button>' : '') +
-    '<button class="primary" id="tour-next">' + (tourI < TOUR.length - 1 ? '次へ' : '出陣する') + '</button></div></div>';
-  $('#tour-next').onclick = () => { sfx('select'); if (tourI < TOUR.length - 1) { tourI++; showTourStep(); } else endTour(); };
+  const last = tourI === TUT.length - 1;
+  const body = st.setup ? SETUP[st.setup]() : '<p>' + st.b + '</p>';
+  card.innerHTML = '<div class="modal-eyebrow">' + (tourI + 1) + ' / ' + TUT.length + '</div><h2>' + st.t + (st.setup && st.setup !== 'war' ? pill(setupState[st.setup]()) : '') + '</h2>' + body +
+    '<div class="tour-foot"><div class="tour-dots">' + TUT.map((_, i) => '<i class="' + (i === tourI ? 'on' : '') + '"></i>').join('') + '</div>' +
+    '<div class="row">' + (tourCanSkip && !last ? '<button class="ghost" id="tour-skip">スキップ</button>' : '') + (tourI ? '<button class="ghost" id="tour-back">戻る</button>' : '') +
+    '<button class="' + (last && window.EMP_WAR && !setupState.war() ? 'ghost' : 'primary') + '" id="tour-next">' + (!last ? (st.setup && !setupState[st.setup]() ? 'あとで' : '次へ') : '出陣する') + '</button></div></div>';
+  $('#tour-next').onclick = () => { sfx('select'); if (!last) { tourI++; showTourStep(); } else endTour(); };
   const bk = $('#tour-back'); if (bk) bk.onclick = () => { sfx('select'); tourI--; showTourStep(); };
   const sk = $('#tour-skip'); if (sk) sk.onclick = () => { sfx('select'); endTour(); };
+  const ins = $('#tu-install'); if (ins) ins.onclick = () => { const p = installPrompt; if (!p) return; p.prompt(); p.userChoice.then(c => { if (c && c.outcome === 'accepted') lsSet('mce_installed', '1'); installPrompt = null; showTourStep(); }).catch(() => {}); };
+  const geo = $('#tu-geo'); if (geo) geo.onclick = () => { startGeo(); setTimeout(showTourStep, 300); };
+  const snd = $('#tu-sound'); if (snd) snd.onclick = () => { lsSet('mce_bgm', '1'); bgmStart(); setTimeout(showTourStep, 300); };
+  const war = $('#tu-war'); if (war) war.onclick = () => { endTour(); openTab('kassen'); };
 }
+function openTab(t) {
+  tab = t; resetStage = 0; $('#menu').hidden = false;
+  document.querySelectorAll('.tab').forEach(x => x.setAttribute('aria-selected', String(x.dataset.tab === t)));
+  renderMenu();
+}
+function openHelp() {
+  const done = [['ホーム画面に追加', setupState.home()], ['位置情報', setupState.geo()], ['BGM', setupState.sound()], ['合戦に参戦', setupState.war()]];
+  showModal('困ったときは', '使い方',
+    '<div class="row"><button class="primary" id="hp-tut">チュートリアルを見る</button><a class="ghost" style="text-decoration:none;display:inline-block" href="' + MANUAL_URL + '" target="_blank" rel="noopener">マニュアルを開く</a></div>' +
+    '<div><h3>準備の状況</h3><div class="history">' + done.map(([n, v]) => '<div><span>' + n + '</span><span style="color:' + (v ? 'var(--jade)' : 'var(--warn)') + '">' + (v ? '済' : 'まだ') + '</span></div>').join('') + '</div></div>' +
+    '<div><h3>よくある質問</h3><div class="law"><ul>' +
+      '<li><b>出陣ボタンが押せない</b>：店の30m以内に入ると押せます。城の画面に距離が出ています。屋内ではGPSがずれやすいので、入口付近で試してください。</li>' +
+      '<li><b>地図が黒い陣図のまま</b>：合戦に参戦すると、総大将が配ったGoogleマップが表示されます。</li>' +
+      '<li><b>音が鳴らない</b>：画面に一度触れると鳴ります。「鼓」ボタンが赤ならオンです。' + (IS_IOS ? 'iPhoneはマナーモードを解除してください。' : '') + '</li>' +
+      '<li><b>参戦できない</b>：合言葉を確認してください。参戦画面に出る赤い文字が原因を示しています。</li>' +
+      '<li><b>新しい機能が出てこない</b>：アプリを一度完全に閉じて開き直してください。</li>' +
+    '</ul></div></div>');
+  $('#hp-tut').onclick = () => { hideModal(); startTour(); };
+}
+$('#b-help').addEventListener('click', () => { sfx('select'); openHelp(); });
 
 /* ---------- 軍法 (rules summary) ---------- */
 function rulesHTML() {
   const tbl = (head, rows) => '<div class="tscroll"><table class="ltable"><tr>' + head.map(h => '<th>' + h + '</th>').join('') + '</tr>' + rows.map(r => '<tr>' + r.map(c => '<td>' + c + '</td>').join('') + '</tr>').join('') + '</table></div>';
-  return '<div class="row"><button class="ghost" id="r-tour">操作説明をもう一度見る</button></div>' +
+  return '<div class="row"><button class="ghost" id="r-tour">チュートリアルをもう一度見る</button><a class="ghost" style="text-decoration:none;display:inline-block" href="' + MANUAL_URL + '" target="_blank" rel="noopener">マニュアルを開く</a></div>' +
     '<section class="law"><h3>序、武士の誓い（インテグリティ）</h3><p>行ってなくてもボタン押せるので、<b>ズルはなしね</b>。出陣は実際に店に行って注文したときだけ。頼んでいない兵糧を選ぶのもなし。<b>インテグリティ</b>をもって対応しましょう。</p></section>' +
     '<section class="law"><h3>一、出陣</h3><ul><li>店の<b>30m以内</b>で城を開き、注文した兵糧を選ぶと出陣（チェックイン）になります。</li><li>店から80m以内に入ると、その城が自動で選ばれます。</li><li>誤って出陣したときは15秒以内なら「取り消す」、それ以降は戦歴タブで削除できます。</li></ul>' +
       tbl(['兵糧', '兵力'], Object.keys(MENUS).map(k => [MENUS[k].name, '+' + MENUS[k].pt])) + '</section>' +
@@ -1670,12 +1775,12 @@ new ResizeObserver(resize).observe($('#wrap'));
 resize(); fitAll(false); refreshHeader();
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(draw);
 setTimeout(connectCloud, 0);
-setTimeout(() => { if (!lsGet('mce_tour_v2')) startTour(() => setTimeout(maybeReport, 600)); else maybeReport(); }, 900);
+setTimeout(() => { if (lsGet('mce_tut_done') !== '1') startTour(() => setTimeout(maybeReport, 600)); else maybeReport(); }, 900);
 loadGoogle();
-startGeo();
+if (lsGet('mce_tut_done') === '1') startGeo();
 })();
 </script>
 
-<script type="module" src="war.js?v=20261028135849"></script>
+<script type="module" src="war.js?v=20261104140014"></script>
 </body>
 </html>

@@ -427,6 +427,7 @@ async function join(name, color, code) {
 
 /* ---------- hooks for the core ---------- */
 window.EMP_WAR = {
+  isMember() { return !!member; },
   blocked(id) { if (!member) return false; const r = owners[id]; return !!(r && r.owner && r.owner !== user.uid); },
   onSave() { if (!member) return; push(); setTimeout(refresh, 0); },
   onStoreEdit(s, gone) { if (member) shareCastle(s, gone); },
